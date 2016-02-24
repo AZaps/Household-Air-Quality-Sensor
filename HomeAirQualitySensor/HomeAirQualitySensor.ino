@@ -230,7 +230,7 @@ int getSensorData(int sensorNumber) {
   // For debugging
   showFreeMemory();
 
-  saveSensorReadings(directoryPath, fullInput);
+  if (isSDInserted) {saveSensorReadings(directoryPath, fullInput);}
 
   // For debugging
   showFreeMemory();
