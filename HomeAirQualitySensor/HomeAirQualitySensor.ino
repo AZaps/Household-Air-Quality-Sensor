@@ -49,6 +49,9 @@ float sensorVoltage;
 float sensorValue;
 int sensorCounter = 0;                // Counter variable for selecting sensor
 int totalAmountOfSensors = 4;         // CHANGE DEPENDING ON AMOUNT OF SENSORS
+long averageRunCounter = 0;
+int sensorAverageArray[4];            // Averages of all the sensors through the minute
+
 
 // General purpose variables
 bool clarity;                         // Return variable check
@@ -84,8 +87,25 @@ void setup() {
 void loop() {
   sensorCounter = getSensorData(sensorCounter);
   
-  if (!isSDInserted) {sdInitCheck(false);}
+  if (!isSDInserted) {
+    // Disable Interrupts
 
+    // Go to function to (re)enable the SD card
+    sdInitCheck(false);
+
+    // Enable Interrupts
+  }
+
+    // Bool value changed from interrupts to see if a minute has passed and need to save data to sensor file
+
+    // Disable the interrupts
+    // Gets date and time.
+    // Then averages each of the sensors and keeps the same date and time. Need to convert from int to ascii
+    // Then saves to the SD card
+    // Enable the interrupts
+    
+  
+  
 } // END OF LOOP
 
 /* Function Declarations */
@@ -96,6 +116,7 @@ void showFreeMemory() {
   Serial.println(freeMemory());
 }
 
+/* Initial check to see if the SD is inserted */
 void sdInitCheck(bool SDInitBool) {
   if (SDInitBool) {
     Serial.println("SD card was found");
@@ -106,6 +127,7 @@ void sdInitCheck(bool SDInitBool) {
   }
 }
 
+/* Sets up the filesystem if the SD is inserted and initialized */
 void setupFilesystemSD() {
   if (isSDInserted) {
     // The SD card was inserted
@@ -117,6 +139,7 @@ void setupFilesystemSD() {
   }
 }
 
+/* Creates the filesystem of the directory and files */
 void createFilesystem() {
   // Creates or verifies directory
   strcat(directoryName, "sendata");
@@ -191,6 +214,7 @@ void createFilesystem() {
   }
 }
 
+/* Switches through the sensors to get the data */
 int getSensorData(int sensorNumber) {
   switch (sensorNumber) {
     case 0:
@@ -209,31 +233,18 @@ int getSensorData(int sensorNumber) {
       strcat(directoryPath, "sen4.txt");
       break;
   }
+
+  // Get date and time when either the data needs to be saved after a minute or if the user wants to see the currently running info
   
-  // Get the date
-  strcat(fullInput, getDateTimeData());
-  Serial.print("Date and time:\t");
-  Serial.println(fullInput);
+//  // Get the date
+//  strcat(fullInput, getDateTimeData());
+//  Serial.print("Date and time:\t");
+//  Serial.println(fullInput);
 
-  // Get the sensor data
-  strcat(fullInput, readSensor(sensorNumber));
+//  // Get the sensor data
+//  strcat(fullInput, readSensor(sensorNumber));
 
-  // Display full file to be saved
-  Serial.println("About to save...");
-  Serial.print("Full Input: ");
-  Serial.println(fullInput);
-  Serial.print("At location: ");
-  Serial.println(directoryPath);
-
-  // Check to see if data can be saved after a minute (or whatever time is chosen) has passed
-
-  // For debugging
-  showFreeMemory();
-
-  if (isSDInserted) {saveSensorReadings(directoryPath, fullInput);}
-
-  // For debugging
-  showFreeMemory();
+  sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + readSensor(sensorNumber);
 
   // Clear out the variables for next time
   clearCharPathnames();
@@ -242,11 +253,17 @@ int getSensorData(int sensorNumber) {
   sensorNumber++;
   if (sensorNumber > totalAmountOfSensors) {
     sensorNumber = 0;
+
+    // Every time the sensor number is maxed increase the average counter
+    // This way this'll be an average total versus incrementing per sensor reading
+    averageRunCounter++;
+    
     return sensorNumber;
   }
   return sensorNumber;
 }
 
+/* Gets and returns the current time formatted as xx/xx/xx xx:xx (month)/(day)/(year) (hour):(minute) */
 char* getDateTimeData() {
   int tempDateTimeInt;
   char tempDateTime[12];
@@ -284,19 +301,32 @@ char* getDateTimeData() {
   return fullDateTime;
 }
 
-char* readSensor(int currentSensor) {
-  // Local variables
-  char sensorDataChar[12];
+///* Reads the corresponding sensor data */
+//char* readSensor(int currentSensor) {
+//  // Local variables
+//  char sensorDataChar[12];
+//
+//  // Will need to redo based on sensor looking to capture
+//  sensorValue = analogRead(currentSensor);
+//
+//  // Convert to string
+//  itoa(sensorValue, sensorDataChar, 10);
+//
+//  return sensorDataChar;
+//}
+
+/* Reads the corresponding sensor data */
+int readSensor(int currentSensor) {
 
   // Will need to redo based on sensor looking to capture
+  // sensorValue is global variable
   sensorValue = analogRead(currentSensor);
 
-  // Convert to string
-  itoa(sensorValue, sensorDataChar, 10);
-
-  return sensorDataChar;
+  return sensorValue;
 }
 
+
+/* Saves the full input to the SD card */
 void saveSensorReadings(char* saveTo, char* dataToSave) {
   myFile = SD.open(directoryPath, FILE_WRITE);
   clarity = sdCardFunctions.writeToSD(myFile, dataToSave, saveTo);
@@ -308,6 +338,7 @@ void saveSensorReadings(char* saveTo, char* dataToSave) {
   myFile.close();
 }
 
+/* Clears the pathname of the input files */
 void clearCharPathnames() {
   memset(directoryPath, 0, sizeof(directoryPath));
   memset(fullInput, 0, sizeof(fullInput));
