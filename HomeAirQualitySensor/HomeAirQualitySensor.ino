@@ -52,6 +52,9 @@ int totalAmountOfSensors = 4;         // CHANGE DEPENDING ON AMOUNT OF SENSORS
 long averageRunCounter = 0;
 int sensorAverageArray[4];            // Averages of all the sensors through the minute
 
+// Interrupt variables
+long oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
+bool oneMinute = false;               // Turns true once a minute has passed, resets once data has been saved
 
 // General purpose variables
 bool clarity;                         // Return variable check
@@ -61,10 +64,13 @@ int analogPin = 0;
 
 
 void setup() {
-  // Disable Interrupts
 
   // For debugging
   showFreeMemory();
+  
+  // Enable interrupts
+  OCR0A = 0xAF;
+  TIMSK0 |= _BV(OCIE0A);
   
   // Check for SD state
   clarity = sdCardFunctions.initializeSD(53,49); // THIS MIGHT CHANGE DEPENDING ON DIFFERENCES WITH TOUCHSCREEN DISPLAY INIT
@@ -77,32 +83,36 @@ void setup() {
   /*      hr  min sec day mth yr      *24 Hour time*/
   setTime(10, 30, 00, 15, 2, 16);
 
-  // Enable Interrupts
-
   // For debugging
   showFreeMemory();
 
 } // END OF SETUP
 
+SIGNAL(TIMER0_COMPA_vect) {
+  // Increments once a millisecond
+  oneMinuteDelayCounter++;
+  if (oneMinuteDelayCounter == 60000) {
+    oneMinute = true;
+  }
+} // END OF INTERRUPT
+
 void loop() {
   sensorCounter = getSensorData(sensorCounter);
   
   if (!isSDInserted) {
-    // Disable Interrupts
-
     // Go to function to (re)enable the SD card
     sdInitCheck(false);
-
-    // Enable Interrupts
   }
 
     // Bool value changed from interrupts to see if a minute has passed and need to save data to sensor file
+  if (oneMinute) {
+    
+  }
 
-    // Disable the interrupts
     // Gets date and time.
     // Then averages each of the sensors and keeps the same date and time. Need to convert from int to ascii
     // Then saves to the SD card
-    // Enable the interrupts
+
     
   
   
@@ -235,14 +245,6 @@ int getSensorData(int sensorNumber) {
   }
 
   // Get date and time when either the data needs to be saved after a minute or if the user wants to see the currently running info
-  
-//  // Get the date
-//  strcat(fullInput, getDateTimeData());
-//  Serial.print("Date and time:\t");
-//  Serial.println(fullInput);
-
-//  // Get the sensor data
-//  strcat(fullInput, readSensor(sensorNumber));
 
   sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + readSensor(sensorNumber);
 
@@ -300,20 +302,6 @@ char* getDateTimeData() {
 
   return fullDateTime;
 }
-
-///* Reads the corresponding sensor data */
-//char* readSensor(int currentSensor) {
-//  // Local variables
-//  char sensorDataChar[12];
-//
-//  // Will need to redo based on sensor looking to capture
-//  sensorValue = analogRead(currentSensor);
-//
-//  // Convert to string
-//  itoa(sensorValue, sensorDataChar, 10);
-//
-//  return sensorDataChar;
-//}
 
 /* Reads the corresponding sensor data */
 int readSensor(int currentSensor) {
