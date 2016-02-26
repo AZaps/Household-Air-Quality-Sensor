@@ -30,7 +30,6 @@
 
     // Initializing Card
 bool SD_Functions::initializeSD(int outputSS, int chipSelect) {
-    Serial.begin(9600);
         // Note that even if it's not used as the CS pin, the hardware SS pin
         // (10 on most Arduino boards, 53 on the Mega) must be left as an output
         // or the SD library functions will not work.
