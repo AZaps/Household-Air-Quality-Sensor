@@ -2,7 +2,7 @@
    Home Air Quality Sensor
    Senior Design 2016
 
-   Code Version 0.1
+   Code Version 0.2
 
    Project Members:
    Lucas Enright
