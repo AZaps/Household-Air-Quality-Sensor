@@ -25,13 +25,13 @@
 #ifndef SDCardLibraryFunctions_h
 #define SDCardLibraryFunctions_h
 
-#include "Arduino.h"
-#include "SPI.h"                    // Include the Serial Paralle Interface
-#include "SD.h"                     // Include the SD library
-#include "HardwareSerial.h"         // Include the hardware serial interface
-#include "MemoryFree.h"
-#include "Time.h"
-#include "TimeLib.h"
+//#include "Arduino.h"
+//#include "SPI.h"                    // Include the Serial Paralle Interface
+//#include "SD.h"                     // Include the SD library
+//#include "HardwareSerial.h"         // Include the hardware serial interface
+//#include "MemoryFree.h"
+//#include "Time.h"
+//#include "TimeLib.h"
 
 
     // library interface description
@@ -39,11 +39,11 @@ class SD_Functions {
         // User accessible public interface
 public:
     bool initializeSD(int, int);
-    bool checkForDirectory(char*);
-    bool checkForSensorFile(File, char*);
+    bool checkForDirectory(String);
+    bool checkForSensorFile(File, String);
     void printDirectory(File, int);
-    bool writeToSD(File, char*, char*);
-    bool readFromSD(File, char*);
+    bool writeToSD(File, String, String);
+    bool readFromSD(File, String);
         // Library accessible private interface
 private:
     

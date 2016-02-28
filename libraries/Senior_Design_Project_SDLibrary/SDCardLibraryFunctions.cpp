@@ -42,7 +42,7 @@ bool SD_Functions::initializeSD(int outputSS, int chipSelect) {
     return true;
 }
 
-bool SD_Functions::checkForDirectory(char* directoryPathname) {
+bool SD_Functions::checkForDirectory(String directoryPathname) {
     if (SD.exists(directoryPathname)) {
             // It exists and can exit
         return true;
@@ -56,7 +56,7 @@ bool SD_Functions::checkForDirectory(char* directoryPathname) {
     }
 }
 
-bool SD_Functions::checkForSensorFile(File myFile, char* sensorFilename) {
+bool SD_Functions::checkForSensorFile(File myFile, String sensorFilename) {
         // Check to see if it exists
     if (SD.exists(sensorFilename)) {
         return true;
@@ -100,7 +100,7 @@ void SD_Functions::printDirectory(File dir, int numTabs) {
 }
 
     // Writing to SD card
-bool SD_Functions::writeToSD(File myFile, char* writeData, char* filenameSD) {
+bool SD_Functions::writeToSD(File myFile, String writeData, String filenameSD) {
     myFile = SD.open(filenameSD, FILE_WRITE);
     if (myFile) {
         myFile.println(writeData);
@@ -113,7 +113,7 @@ bool SD_Functions::writeToSD(File myFile, char* writeData, char* filenameSD) {
 }
 
     // Read from the SD card
-bool SD_Functions::readFromSD(File myFile, char* filenameSD) {
+bool SD_Functions::readFromSD(File myFile, String filenameSD) {
     if (myFile) {
             // Read from the file until there is nothing else in it
         while(myFile.available()) {
