@@ -27,45 +27,34 @@
 #include <Time.h>
 #include <TimeLib.h>
 #include <stdlib.h>
-/*
-   SDCardLibraryFunctions library also includes
-   Arduino.h
-   SPI.h
-   SD.h
-   HardwareSerial.h
-   MemoryFree.h -- Used to check for currently free memory
-   Time.h
-   TimeLib.h
 
-   Also sets Serial.begin(9600)
-*/
 
 /* ---------- Variable Declarations ---------- */
 // SD related variables
-SD_Functions sdCardFunctions;         // Used to communicate with library
-File myFile;                          // Used to save information to SD card
-bool isSDInserted;                    // Check to see if the SD card is inserted
+SD_Functions sdCardFunctions;                 // Used to communicate with library
+File myFile;                                  // Used to save information to SD card
+bool isSDInserted;                            // Check to see if the SD card is inserted
 
 // SD related saving variables
 String directoryPath = "/sendata/";
-String fullInput;                   // The full input of Date/Time/Data
+String fullInput;                             // The full input of Date/Time/Data
 String directoryName = "sendata";
 String currentSavingDateTime;
 
 // Sensor variables
 float sensorVoltage;
 float sensorValue;
-int sensorCounter = 0;                // Counter variable for selecting sensor
-long totalAmountOfSensors = 4;        // CHANGE DEPENDING ON AMOUNT OF SENSORS
-long averageRunCounter = 0;
-long sensorAverageArray[4];           // Averages of all the sensors through the minute
+int sensorCounter = 0;                        // Counter variable for selecting sensor
+double totalAmountOfSensors = 4;        // CHANGE DEPENDING ON AMOUNT OF SENSORS
+double sensorAverageArray[5];           // Averages of all the sensors through the minute
+double sensorRuntimeCounter = 0;
 
 // Interrupt variables
-long oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
-bool oneMinute = false;               // Turns true once a minute has passed, resets once data has been saved
+unsigned int oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
+bool oneMinute = false;                       // Turns true once a minute has passed, resets once data has been saved
 
 // General purpose variables
-bool clarity;                         // Return variable check
+bool clarity;                                 // Return variable check
 
 // Temporary variables
 int analogPin = 0;
@@ -101,7 +90,7 @@ void setup() {
 SIGNAL(TIMER0_COMPA_vect) {
   // Increments once a millisecond
   oneMinuteDelayCounter++;
-  if (oneMinuteDelayCounter == 10000) {
+  if (oneMinuteDelayCounter == 60000) {
     oneMinute = true;
     Serial.println("One minute has passed.");
   }
@@ -109,13 +98,6 @@ SIGNAL(TIMER0_COMPA_vect) {
 
 void loop() {
   sensorCounter = getSensorData(sensorCounter);
-
-  // Only re-initializes the SD card if it was removed or not inserted from the start
-  if (isSDInserted == false) {
-    // Go to function to (re)enable the SD card
-    clarity = sdCardFunctions.initializeSD(53, 49);
-    sdInitCheck(clarity);
-  }
 
   // Check bool oneMinute value to see if true
   if (oneMinute) {
@@ -126,7 +108,11 @@ void loop() {
       oneMinuteSave();
     } else {
       Serial.println("The SD card is not inserted. Not saving data. Will check again on next pass.");
-      isSDInserted = false;
+      if (isSDInserted == false) {
+        // Go to function to (re)enable the SD card
+        clarity = sdCardFunctions.initializeSD(53, 49);
+        sdInitCheck(clarity);
+      }
     }
     clearInterruptVariables();
   }
@@ -236,7 +222,6 @@ void createFilesystem() {
       Serial.println(" was NOT created.");
     }
     // Reset the directiry path filename
-    memset(directoryPath, 0, sizeof(directoryPath));
     directoryPath = String("/sendata/");
     myFile.close();
 
@@ -259,11 +244,7 @@ int getSensorData(int sensorNumber) {
   sensorNumber++;
   if (sensorNumber > totalAmountOfSensors) {
     sensorNumber = 0;
-
-    // Every time the sensor number is maxed increase the average counter
-    // This way this'll be an average total versus incrementing per sensor reading
-    averageRunCounter++;
-
+    sensorRuntimeCounter++;
     return sensorNumber;
   }
   return sensorNumber;
@@ -329,48 +310,35 @@ void oneMinuteSave() {
   Serial.println("IN ONE MINUTE SAVE");
   // Get the date first so the data will all be saved at the same time
   currentSavingDateTime = getDateTimeData();
-  Serial.print("The current dateTime to be saved to all sensors: ");
-  delay(10);
-  Serial.println(currentSavingDateTime);
-  delay(10);
-
+  
   // Save all sensor data
   for (int j = 0; j <= 4; j++) {
-    delay(10);
     // Concatenate the date to the fullInput
     fullInput = String(fullInput + currentSavingDateTime);
 
     // Get average value for sensor
     long tempAverageLong = sensorAverageArray[j];
     String tempAverageString;
-    Serial.println(tempAverage);
-    tempAverage = tempAverage / averageRunCounter;
+    tempAverageLong = tempAverageLong / sensorRuntimeCounter;
     // Convert to an ascii character
     tempAverageString = String(tempAverageLong);
+    
     // Append to the fullInput
     fullInput = String(fullInput + tempAverageLong);
-    Serial.print("Current Full Input: ");
-    Serial.println(fullInput);
-    delay(10);
 
-    //    // Convert current sensor number to ascii
-    //    int tempPos = i;
-    //    itoa(tempPos, convertBuffer, 10);
-    //    // Add to directoryPath
-    //    strcat(directoryPath, "sen");
-    //    strcat(directoryPath, "0");
-    //    strcat(directoryPath,".txt");
-    //
-    //    // Send to be saved
-    //    Serial.print("INPUT TO BE SAVED: ");
-    //    Serial.print(fullInput);
-    //    Serial.print(". AT DIRECTORYPATH: ");
-    //    Serial.println(directoryPath);
-    //
-    //    saveSensorReadings(directoryPath, fullInput);
+    // Convert current sensor number to ascii
+    directoryPath = String(directoryPath + "sen" + j + ".txt");
+    // Send to be saved
+    Serial.print("INPUT TO BE SAVED: ");
+    Serial.print(fullInput);
+    Serial.print(". AT DIRECTORYPATH: ");
+    Serial.println(directoryPath);
+    saveSensorReadings(directoryPath, fullInput);
+    
     clearSavedStrings();
-    //        // For debugging
-    //    showFreeMemory();
+    
+    // For debugging
+    showFreeMemory();
   }
 }
 
@@ -395,7 +363,7 @@ void clearSavedStrings() {
 
 void clearInterruptVariables() {
   // Reset the averageRunCounter;
-  averageRunCounter = 0;
+  sensorRuntimeCounter = 0;
   // Reset the oneMinute bool
   oneMinute = false;
   // Reset the current dateTime saved

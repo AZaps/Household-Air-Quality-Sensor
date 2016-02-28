@@ -22,10 +22,10 @@
  */
 
 #include "SDCardLibraryFunctions.h"   // Include the library's header file
-//#include "Arduino.h"                // Include the wiring API
-//#include "SPI.h"                    // Include the Serial Parallel Interface
-//#include "SD.h"                     // Include the SD library
-//#include "HardwareSerial.h"         // Include the hardware serial interface
+#include <Arduino.h>                  // Include the wiring API
+#include <SPI.h>                      // Include the Serial Parallel Interface
+#include <SD.h>                       // Include the SD library
+
 
 
     // Initializing Card

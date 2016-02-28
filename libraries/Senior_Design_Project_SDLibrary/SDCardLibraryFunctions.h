@@ -25,13 +25,11 @@
 #ifndef SDCardLibraryFunctions_h
 #define SDCardLibraryFunctions_h
 
-//#include "Arduino.h"
-//#include "SPI.h"                    // Include the Serial Paralle Interface
-//#include "SD.h"                     // Include the SD library
-//#include "HardwareSerial.h"         // Include the hardware serial interface
-//#include "MemoryFree.h"
-//#include "Time.h"
-//#include "TimeLib.h"
+#include "Arduino.h"
+#include <Arduino.h>                  // Include the wiring API
+#include <SPI.h>                      // Include the Serial Parallel Interface
+#include <SD.h>                       // Include the SD library
+
 
 
     // library interface description
