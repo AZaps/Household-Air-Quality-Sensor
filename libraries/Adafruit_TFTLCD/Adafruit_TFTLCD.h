@@ -51,27 +51,27 @@ class Adafruit_TFTLCD : public Adafruit_GFX {
            // These items may have previously been defined as macros
            // in pin_magic.h.  If not, function versions are declared:
 #ifndef write8
-    write8(uint8_t value),
+           write8(uint8_t value),
 #endif
 #ifndef setWriteDir
-    setWriteDir(void),
+           setWriteDir(void),
 #endif
 #ifndef setReadDir
-    setReadDir(void),
+           setReadDir(void),
 #endif
 #ifndef writeRegister8
-    writeRegister8(uint8_t a, uint8_t d),
+           writeRegister8(uint8_t a, uint8_t d),
 #endif
 #ifndef writeRegister16
-    writeRegister16(uint16_t a, uint16_t d),
+           writeRegister16(uint16_t a, uint16_t d),
 #endif
     writeRegister24(uint8_t a, uint32_t d),
     writeRegister32(uint8_t a, uint32_t d),
 #ifndef writeRegisterPair
-    writeRegisterPair(uint8_t aH, uint8_t aL, uint16_t d),
+           writeRegisterPair(uint8_t aH, uint8_t aL, uint16_t d),
 #endif
-    setLR(void),
-    flood(uint16_t color, uint32_t len);
+           setLR(void),
+           flood(uint16_t color, uint32_t len);
   uint8_t  driver;
 
 #ifndef read8
@@ -83,16 +83,16 @@ class Adafruit_TFTLCD : public Adafruit_GFX {
 
   #ifdef __AVR__
     volatile uint8_t *csPort    , *cdPort    , *wrPort    , *rdPort;
-             uint8_t  csPinSet  ,  cdPinSet  ,  wrPinSet  ,  rdPinSet  ,
-                      csPinUnset,  cdPinUnset,  wrPinUnset,  rdPinUnset,
-                      _reset;
+	uint8_t           csPinSet  ,  cdPinSet  ,  wrPinSet  ,  rdPinSet  ,
+					  csPinUnset,  cdPinUnset,  wrPinUnset,  rdPinUnset,
+					  _reset;
   #endif
   #if defined(__SAM3X8E__)
-	     Pio      *csPort    , *cdPort    , *wrPort    , *rdPort;
-	     uint32_t csPinSet  ,  cdPinSet  ,  wrPinSet  ,  rdPinSet  ,
-	              csPinUnset,  cdPinUnset,  wrPinUnset,  rdPinUnset,
-	              _reset;
-#endif
+    Pio *csPort    , *cdPort    , *wrPort    , *rdPort;
+	uint32_t          csPinSet  ,  cdPinSet  ,  wrPinSet  ,  rdPinSet  ,
+					  csPinUnset,  cdPinUnset,  wrPinUnset,  rdPinUnset,
+					  _reset;
+  #endif
   
 #endif
 };
