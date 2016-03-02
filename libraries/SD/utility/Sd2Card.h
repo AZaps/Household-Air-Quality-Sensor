@@ -184,7 +184,7 @@ class Sd2Card {
   uint8_t init(uint8_t sckRateID) {
     return init(sckRateID, SD_CHIP_SELECT_PIN);
   }
-  uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin, int8_t mosiPin = -1, int8_t misoPin = -1, int8_t clockPin = -1);
+  uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
   void partialBlockRead(uint8_t value);
   /** Returns the current value, true or false, for partial block read. */
   uint8_t partialBlockRead(void) const {return partialBlockRead_;}
@@ -212,9 +212,7 @@ class Sd2Card {
   uint8_t writeData(const uint8_t* src);
   uint8_t writeStart(uint32_t blockNumber, uint32_t eraseCount);
   uint8_t writeStop(void);
-  void    enableCRC(uint8_t mode);
-
-private:
+ private:
   uint32_t block_;
   uint8_t chipSelectPin_;
   uint8_t errorCode_;
@@ -223,9 +221,6 @@ private:
   uint8_t partialBlockRead_;
   uint8_t status_;
   uint8_t type_;
-  uint8_t writeCRC_;
-
-  
   // private functions
   uint8_t cardAcmd(uint8_t cmd, uint32_t arg) {
     cardCommand(CMD55, 0);
