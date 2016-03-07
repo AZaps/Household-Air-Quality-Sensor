@@ -20,7 +20,7 @@
 //   D7 connects to digital pin 29
 
 //16-bit color values:
-#define  BLACK   0x0000
+#define BLACK   0x0000
 #define BLUE    0x001F
 #define RED     0xF800
 #define GREEN   0x07E0
@@ -81,25 +81,11 @@ void setup(void) {
 
 
   Serial.println(F("Done!"));
-}
 
-
-void loop(void) {
-  if (ran){
-    tft.setRotation(1);
-    welcomeScreen();
-    delay(10000);
-    dataLayout();
-    delay(10000);
-    ran = false;
-  }
-}
-
-unsigned long welcomeScreen() {
+  tft.setRotation(1);
   tft.fillScreen(BLACK);
-  unsigned long start = micros();
-  tft.setCursor(180,0);
   tft.setTextColor(WHITE);    tft.setTextSize(5.5);
+  tft.setCursor(180,0);
   tft.println("Home");
   tft.setCursor(200,60);
   tft.println("Air");
@@ -109,23 +95,57 @@ unsigned long welcomeScreen() {
   tft.println("Sensor");
   tft.setCursor(155,240);
   tft.println("'HAQS'");
-  
-  return micros() - start;
+  delay(5000);
+  tft.setTextColor(BLACK);
+  tft.setCursor(180,0);
+  tft.println("Home");
+  tft.setCursor(200,60);
+  tft.println("Air");
+  tft.setCursor(135,120);
+  tft.println("Quality");
+  tft.setCursor(155,180);
+  tft.println("Sensor");
+  tft.setCursor(155,240);
+  tft.println("'HAQS'");
 }
 
-unsigned long dataLayout(){
-  tft.fillScreen(BLACK);
+
+void loop(void) {
+  if (ran){
+    tft.setRotation(1);
+   // welcomeScreen();
+  //  delay(10000);
+    dataLayout();
+    tft.setTextSize(10);
+    tft.setCursor(90,100);
+    tft.println("10:43");
+    tft.fillRoundRect(10, 240, 150, 70, 20, GREEN);
+    tft.fillTriangle(85, 300, 48, 250, 121, 250, 0xF800);
+    tft.fillRoundRect(320, 240, 150, 70, 20, MAGENTA);
+    tft.fillTriangle(395, 250, 358, 300, 431, 300, RED);
+  //  delay(10000);
+    ran = false;
+  }
+}
+
+
+void dataLayout(){
+  //tft.fillScreen(BLACK);
   unsigned long start = micros();
   tft.setCursor(0,0);
   tft.setTextColor(WHITE);    tft.setTextSize(3);
   tft.println("Temperature");
   tft.setCursor(310,0);
   tft.println("Humidity");
-  tft.setCursor(0,210);
-  tft.println("Meas1");
-  tft.setCursor(310,210);
-  tft.println("Meas2");
+//  tft.setCursor(0,210);
+//  tft.println("Meas1");
+//  tft.setCursor(310,210);
+//  tft.println("Meas2");
   
+}
+
+void buttonLayout(){
+  tft.fillRoundRect(100, 300, 10, 10, 1/8,BLUE);
 }
 
 
