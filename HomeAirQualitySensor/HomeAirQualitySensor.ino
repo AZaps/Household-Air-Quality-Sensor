@@ -18,7 +18,7 @@
 */
 
 /* ---------- Libraries ---------- */
-#include <SDCardLibraryFunctions.h> // Handles all SD related functions
+//#include <SDCardLibraryFunctions.h> // Handles all SD related functions
 #include <Arduino.h>
 #include <SPI.h>
 #include <SD.h>
@@ -89,7 +89,7 @@ void setup() {
 SIGNAL(TIMER0_COMPA_vect) {
   // Increments once a millisecond
   oneMinuteDelayCounter++;
-  if (oneMinuteDelayCounter == 60000) {
+  if (oneMinuteDelayCounter == 20000) {
     oneMinute = true;
     Serial.println("One minute has passed.");
   }

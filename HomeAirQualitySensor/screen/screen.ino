@@ -1,5 +1,12 @@
 #include <Adafruit_GFX.h>    // Core graphics library
 #include <Adafruit_TFTLCD.h> // Hardware-specific library
+#include <TouchScreen.h>
+#include <Fonts/FreeSerif12pt7b.h>  // Include new fonts
+#include <Fonts/FreeSerif18pt7b.h>
+#include <Fonts/FreeSerifBold24pt7b.h>
+#include <Fonts/FreeSerif24pt7b.h>
+#include <Fonts/FreeSansBold24pt7b.h>
+
 
 #define LCD_CS A3 // Chip Select goes to Analog 3
 #define LCD_CD A2 // Command/Data goes to Analog 2
@@ -19,6 +26,16 @@
 //   D6 connects to digital pin 28
 //   D7 connects to digital pin 29
 
+#define YP A3  // must be an analog pin, use "An" notation!
+#define XM A2  // must be an analog pin, use "An" notation!
+#define YM 23   // can be a digital pin
+#define XP 22  // can be a digital pin
+
+#define TS_MINX 150
+#define TS_MINY 120
+#define TS_MAXX 920
+#define TS_MAXY 940
+
 //16-bit color values:
 #define BLACK   0x0000
 #define BLUE    0x001F
@@ -32,6 +49,7 @@
 bool ran = true;
 
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
 
 void setup(void) {
@@ -82,70 +100,224 @@ void setup(void) {
 
   Serial.println(F("Done!"));
 
-  tft.setRotation(1);
+  tft.setFont(&FreeSerif24pt7b);  // Set font to Serif 24pt
+  tft.setRotation(1);             // Rotate text on screen
   tft.fillScreen(BLACK);
-  tft.setTextColor(WHITE);    tft.setTextSize(5.5);
-  tft.setCursor(180,0);
-  tft.println("Home");
-  tft.setCursor(200,60);
+  tft.setTextColor(WHITE);  
+  tft.setCursor(170,40);          // Set cursor location
+  tft.println("Home");            // Print string
+  tft.setCursor(190,100);
   tft.println("Air");
-  tft.setCursor(135,120);
+  tft.setCursor(155,160);
   tft.println("Quality");
-  tft.setCursor(155,180);
+  tft.setCursor(160,220);
   tft.println("Sensor");
-  tft.setCursor(155,240);
+  tft.setCursor(155,280);
   tft.println("'HAQS'");
-  delay(5000);
-  tft.setTextColor(BLACK);
-  tft.setCursor(180,0);
+  delay(1000);
+  tft.setTextColor(BLACK);        // Set text to black and write over previous text strings
+  tft.setCursor(170,40);
   tft.println("Home");
-  tft.setCursor(200,60);
+  tft.setCursor(190,100);
   tft.println("Air");
-  tft.setCursor(135,120);
+  tft.setCursor(155,160);
   tft.println("Quality");
-  tft.setCursor(155,180);
+  tft.setCursor(160,220);
   tft.println("Sensor");
-  tft.setCursor(155,240);
+  tft.setCursor(155,280);
   tft.println("'HAQS'");
+
+   
+  dataLayout();
+  tft.setFont(&FreeSansBold24pt7b);
+  
+  tft.setCursor(180,300);
+  tft.println("Time");
+  
+  tft.setFont();  // Disables previous font setting
+  tft.fillRoundRect(10, 240, 150, 70, 20, BLUE);       // Print boxes for buttons
+  tft.fillTriangle(85, 300, 48, 250, 121, 250, 0xF800); //
+  
+  tft.fillRoundRect(320, 240, 150, 70, 20, BLUE);    //
+  tft.fillTriangle(395, 250, 358, 300, 431, 300, RED);  //
 }
 
 
+#define MINPRESSURE 1
+#define MAXPRESSURE 1000
+
+int screenCount = 1;
+
 void loop(void) {
   if (ran){
-    tft.setRotation(1);
-   // welcomeScreen();
-  //  delay(10000);
-    dataLayout();
-    tft.setTextSize(10);
-    tft.setCursor(90,100);
-    tft.println("10:43");
-    tft.fillRoundRect(10, 240, 150, 70, 20, GREEN);
-    tft.fillTriangle(85, 300, 48, 250, 121, 250, 0xF800);
-    tft.fillRoundRect(320, 240, 150, 70, 20, MAGENTA);
-    tft.fillTriangle(395, 250, 358, 300, 431, 300, RED);
-  //  delay(10000);
-    ran = false;
+
+    TSPoint p = ts.getPoint();
+    
+    pinMode(XM, OUTPUT);
+    pinMode(YP, OUTPUT);
+
+    
+  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
+    
+    p.x = map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
+    p.y = map(p.y, TS_MINY, TS_MAXY, tft.height(), 0);
+
+    if (p.x >= 350 && p.x <= 480){
+   
+      if (p.y <100){
+            screenCount++;
+            
+            if (screenCount==10){
+
+             screenCount=1;
+           }
+            tft.fillRect(0, 45, 480, 190, BLACK);
+            dataLayout();
+            tft.setFont(&FreeSansBold24pt7b);
+
+      }
+
+    
+     else if (p.y > 220){
+            screenCount--;
+            if (screenCount==0){
+             
+              screenCount=9;
+              
+              }
+            tft.fillRect(0, 45, 480, 190, BLACK);
+            dataLayout();
+            tft.setFont(&FreeSansBold24pt7b);
+
+
+    }
+    }
+    
+  }
+ 
   }
 }
 
 
-void dataLayout(){
-  //tft.fillScreen(BLACK);
-  unsigned long start = micros();
-  tft.setCursor(0,0);
-  tft.setTextColor(WHITE);    tft.setTextSize(3);
-  tft.println("Temperature");
-  tft.setCursor(310,0);
-  tft.println("Humidity");
-//  tft.setCursor(0,210);
-//  tft.println("Meas1");
-//  tft.setCursor(310,210);
-//  tft.println("Meas2");
-  
+void dataLayout(){  //Prints data in top right & left corners
+  tft.setFont(&FreeSerif24pt7b);
+  tft.setCursor(5,40);
+  tft.setTextColor(WHITE);   
+  tft.println("76 F");
+  tft.setCursor(390,40);
+  tft.println("80%");  
+
+  if (screenCount==1){
+
+    tft.setCursor(220,150);
+    tft.println("GAS1");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS9");
+
+    tft.setCursor(350,230);
+    tft.println("GAS2");   
+     
+  }
+
+  else if (screenCount==2){
+    tft.setCursor(220,150);
+    tft.println("GAS2");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS1");
+
+    tft.setCursor(350,230);
+    tft.println("GAS3");
+      
+  }
+
+   else if (screenCount==3){
+    tft.setCursor(220,150);
+    tft.println("GAS3");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS2");
+
+    tft.setCursor(350,230);
+    tft.println("GAS4");
+      
+  }
+
+   else if (screenCount==4){
+    tft.setCursor(220,150);
+    tft.println("GAS4");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS3");
+
+    tft.setCursor(350,230);
+    tft.println("GAS5");
+      
+  }
+
+   else if (screenCount==5){
+    tft.setCursor(220,150);
+    tft.println("GAS5");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS4");
+
+    tft.setCursor(350,230);
+    tft.println("GAS6");
+      
+  }
+
+   else if (screenCount==6){
+    tft.setCursor(220,150);
+    tft.println("GAS6");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS5");
+
+    tft.setCursor(350,230);
+    tft.println("GAS7");
+      
+  }
+
+   else if (screenCount==7){
+    tft.setCursor(220,150);
+    tft.println("GAS7");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS6");
+
+    tft.setCursor(350,230);
+    tft.println("GAS8");
+      
+  }
+
+   else if (screenCount==8){
+    tft.setCursor(220,150);
+    tft.println("GAS8");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS7");
+
+    tft.setCursor(350,230);
+    tft.println("GAS9");
+      
+  }
+
+   else if (screenCount==9){
+    tft.setCursor(220,150);
+    tft.println("GAS9");
+    
+    tft.setCursor(50,230);
+    tft.println("GAS8");
+
+    tft.setCursor(350,230);
+    tft.println("GAS1");
+      
+  }
+
+
 }
 
-void buttonLayout(){
-  tft.fillRoundRect(100, 300, 10, 10, 1/8,BLUE);
-}
 
 
