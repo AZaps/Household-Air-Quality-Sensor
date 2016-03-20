@@ -41,12 +41,12 @@ String directoryName = "sendata";
 String currentSavingDateTime;
 
 // Sensor variables
-float sensorVoltage;
-float sensorValue;
-int sensorCounter = 8;                        // Counter variable for selecting sensor
-double totalAmountOfSensors = 4;              // CHANGE DEPENDING ON AMOUNT OF SENSORS
-double sensorAverageArray[5];                 // Averages of all the sensors through the minute
-double sensorRuntimeCounter = 0;
+long sensorVoltage;
+long sensorValue;
+int sensorCounter = 0;                        // Counter variable for selecting sensor
+long totalAmountOfSensors = 4;              // CHANGE DEPENDING ON AMOUNT OF SENSORS
+long sensorAverageArray[5];                 // Averages of all the sensors through the minute
+long sensorRuntimeCounter = 0;
 
 // Interrupt variables
 unsigned int oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
@@ -65,7 +65,7 @@ void setup() {
   showFreeMemory();
 
   // Check for SD state
-  clarity = sdCardFunctions.initializeSD(53, 49); // THIS MIGHT CHANGE DEPENDING ON DIFFERENCES WITH TOUCHSCREEN DISPLAY INIT
+  clarity = sdCardFunctions.initializeSD(53, 49);
   sdInitCheck(clarity);
 
   // Checks to see if SD card is inserted and if so, creates the filesystem
@@ -89,7 +89,7 @@ void setup() {
 SIGNAL(TIMER0_COMPA_vect) {
   // Increments once a millisecond
   oneMinuteDelayCounter++;
-  if (oneMinuteDelayCounter == 60000) {
+  if (oneMinuteDelayCounter == 5000) {
     oneMinute = true;
     Serial.println("One minute has passed.");
   }
@@ -233,7 +233,7 @@ void createFilesystem() {
 int getSensorData(int sensorNumber) {
   // Get date and time when either the data needs to be saved after a minute or if the user wants to see the currently running info
 
-  sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + readSensor(sensorNumber);
+  sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + readSensor(sensorNumber+8);
   Serial.print("On sensor number: ");
   Serial.print(sensorNumber);
   Serial.print(". Has a value of: ");
@@ -241,8 +241,8 @@ int getSensorData(int sensorNumber) {
 
   // Increment sensor number and return
   sensorNumber++;
-  if (sensorNumber > 15) {
-    sensorNumber = 8;
+  if (sensorNumber > totalAmountOfSensors) {
+    sensorNumber = 0;
     sensorRuntimeCounter++;
     return sensorNumber;
   }
@@ -295,7 +295,7 @@ String getDateTimeData() {
 }
 
 /* Reads the corresponding sensor data */
-float readSensor(int currentSensor) {
+long readSensor(int currentSensor) {
 
   // Will need to redo based on sensor looking to capture
   // sensorValue is global variable
@@ -307,16 +307,16 @@ float readSensor(int currentSensor) {
 /* After a minute this function will be called to save the value of each sensor */
 void oneMinuteSave() {
   Serial.println("IN ONE MINUTE SAVE");
+  
   // Get the date first so the data will all be saved at the same time
   currentSavingDateTime = getDateTimeData();
   
   // Save all sensor data
-  for (int j = 8; j <= 15; j++) {
+  for (int i = 0; i <= totalAmountOfSensors; i++) {
     // Concatenate the date to the fullInput
     fullInput = String(fullInput + currentSavingDateTime);
-
     // Get average value for sensor
-    long tempAverageLong = sensorAverageArray[j];
+    long tempAverageLong = sensorAverageArray[i];
     String tempAverageString;
     tempAverageLong = tempAverageLong / sensorRuntimeCounter;
     // Convert to an ascii character
@@ -326,7 +326,8 @@ void oneMinuteSave() {
     fullInput = String(fullInput + tempAverageLong);
 
     // Convert current sensor number to ascii
-    directoryPath = String(directoryPath + "sen" + j + ".txt");
+    directoryPath = String(directoryPath + "sen" + i + ".txt");
+    Serial.println(directoryPath);
     // Send to be saved
     Serial.print("INPUT TO BE SAVED: ");
     Serial.print(fullInput);
@@ -335,7 +336,6 @@ void oneMinuteSave() {
     saveSensorReadings(directoryPath, fullInput);
     
     clearSavedStrings();
-    
     // For debugging
     showFreeMemory();
   }
