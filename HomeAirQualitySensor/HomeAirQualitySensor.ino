@@ -28,6 +28,29 @@
 #include <TimeLib.h>
 #include <stdlib.h>
 
+/* ---------- Definitions ---------- */
+#define MQ2 8                                 // Analog pin for MQ2 sensor
+#define MQ5 9                                 // Analog pin for MQ5 sensor
+#define RL 5                                  // Sensor load resistance in k-Ohms
+#define RO_CLEAN_AIR 9.83                     // clean air factor which is (sensor resistance in clean air/RO)
+
+#define CALIBRATION_SAMPLE_SIZE 25
+#define CALIBRATION_DELAY 250
+
+// Don't need multiple readings per loop cycle
+// Loop throughs will take average after a minute
+
+// MQ2
+#define LPG 0
+#define CO 1
+#define SMOKE 2
+// MQ5
+
+// Temperature and Humidity sensor
+// Change these values to be last
+#define TEMP 3
+#define HUMIDITY 4
+
 /* ---------- Variable Declarations ---------- */
 // SD related variables
 SD_Functions sdCardFunctions;                 // Used to communicate with library
@@ -41,12 +64,11 @@ String directoryName = "sendata";
 String currentSavingDateTime;
 
 // Sensor variables
-float sensorVoltage;
 float sensorValue;
-int sensorCounter = 8;                        // Counter variable for selecting sensor
-double totalAmountOfSensors = 4;              // CHANGE DEPENDING ON AMOUNT OF SENSORS
-double sensorAverageArray[5];                 // Averages of all the sensors through the minute
-double sensorRuntimeCounter = 0;
+int sensorCounter = 0;                        // Counter variable for selecting sensor
+int totalAmountOfSensors = 5;                 // CHANGE DEPENDING ON AMOUNT OF SENSORS
+long sensorAverageArray[5];                   // Averages of all the sensors through the minute
+long sensorRuntimeCounter = 0;
 
 // Interrupt variables
 unsigned int oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
@@ -58,6 +80,13 @@ bool clarity;                                 // Return variable check
 // Temporary variables
 int analogPin = 0;
 
+float LPGCurve[3] = {2.3, 0.21, -0.47};
+float COCurve[3] = {2.3, 0.72, -0.34};
+float SmokeCurve[3] = {2.3, 0.53, -0.44};
+
+float RoMQ2 = 10;                             // 10 kOhms
+float RoMQ5 = 10;
+
 void setup() {
   Serial.begin(115200);
 
@@ -65,7 +94,7 @@ void setup() {
   showFreeMemory();
 
   // Check for SD state
-  clarity = sdCardFunctions.initializeSD(53, 49); // THIS MIGHT CHANGE DEPENDING ON DIFFERENCES WITH TOUCHSCREEN DISPLAY INIT
+  clarity = sdCardFunctions.initializeSD(53, 49);
   sdInitCheck(clarity);
 
   // Checks to see if SD card is inserted and if so, creates the filesystem
@@ -81,6 +110,10 @@ void setup() {
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
 
+  // Calibrate the senor
+  RoMQ2 = calibrateMQSensor(MQ2);
+  RoMQ5 = calibrateMQSensor(MQ5);
+  
   // For debugging
   showFreeMemory();
 
@@ -135,7 +168,9 @@ void showFreeMemory() {
   Serial.println(freeMemory());
 }
 
-/* Initial check to see if the SD is inserted */
+/*
+ * Initial check to see if an SD card is inserted into the system
+ */
 void sdInitCheck(bool SDInitBool) {
   if (SDInitBool) {
     Serial.println("SD card was found");
@@ -146,7 +181,11 @@ void sdInitCheck(bool SDInitBool) {
   }
 }
 
-/* Sets up the filesystem if the SD is inserted and initialized */
+/*
+ * This checks to see if the SD card is inserted and will setup the filesystem.
+ * This saftey check is needed because if the Arduino tries create a filesystem on a non-existent SD
+ * card the program will crash.
+ */
 void setupFilesystemSD() {
   if (isSDInserted) {
     // The SD card was inserted
@@ -158,7 +197,11 @@ void setupFilesystemSD() {
   }
 }
 
-/* Creates the filesystem of the directory and files */
+/*
+ * This function will first check to see if the correct directoy and files have been created on the SD card
+ * If the directory and files are already created then nothing is needed.
+ * Otherwise, the function will create the directory and files and relies on the custom SD library
+ */
 void createFilesystem() {
 
   // For debugging
@@ -229,11 +272,23 @@ void createFilesystem() {
   }
 }
 
-/* Switches through the sensors to get the data */
+/*
+ * Initial function to determine the currently selected sensor which will go to another function to 
+ * read the currently selected sensor and will pass the value back to this function which will hold a total
+ * added value for each gas type until a minute has passed.
+ * It also keeps a running total for when the average is needed after a minute
+ */
 int getSensorData(int sensorNumber) {
-  // Get date and time when either the data needs to be saved after a minute or if the user wants to see the currently running info
+  float tempSensorValue = 0;
+  
+  // Get pure analog or digital value for sensors
+  tempSensorValue = readSensor(sensorNumber);
 
-  sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + readSensor(sensorNumber);
+  // Convert value according to datasheet
+  // Saves in ppm 
+  tempSensorValue = getSensorPercentages(tempSensorValue, sensorNumber);
+  
+  sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + tempSensorValue;
   Serial.print("On sensor number: ");
   Serial.print(sensorNumber);
   Serial.print(". Has a value of: ");
@@ -241,15 +296,82 @@ int getSensorData(int sensorNumber) {
 
   // Increment sensor number and return
   sensorNumber++;
-  if (sensorNumber > 15) {
-    sensorNumber = 8;
+  if (sensorNumber > totalAmountOfSensors) {
+    sensorNumber = 0;
     sensorRuntimeCounter++;
     return sensorNumber;
   }
   return sensorNumber;
 }
 
-/* Gets and returns the current time formatted as xx/xx/xx xx:xx (month)/(day)/(year) (hour):(minute) */
+/*
+ * Reads the pure analog resistance value from the sensors or
+ * digital value from the temperature and humidity sensor
+ */
+float readSensor(int currentSensor) {
+  float rs = 0;
+
+  // Reads the analog or digital value of the sensors
+  // First checks MQ2 sensor
+  if (currentSensor == 0 || currentSensor <= 2) {
+    rs = sensorResistanceCalculation(analogRead(MQ2));
+    rs = rs / RoMQ2;
+  }
+  // MQ5 
+  //else if (currentSensor ==) {
+    // rs = sensorResistanceCalculation(analogRead(MQ5));
+    // rs = rs / RoMQ5;
+  //}
+  // Temperature and humidity
+  else if (currentSensor == 3 || currentSensor == 4) {
+    
+  }
+  return rs;
+}
+
+/*
+ * Passes the gas curves to getPercentages if MQ sensor otherwise
+ * will go to different function to get the temperature or humidity
+ */
+long getSensorPercentages (float rsRoRatio, int gasID) {
+  switch (gasID) {
+    case 0:
+      return getPercentages(rsRoRatio,LPGCurve);
+      break;
+    case 1:
+      return getPercentages(rsRoRatio,COCurve);
+      break;
+    case 2:
+      return getPercentages(rsRoRatio,SmokeCurve);
+      break;
+    case 3:
+      return getTemperatureOrHumidity(rsRoRatio, TEMP);
+      break;
+    case 4:
+      return getTemperatureOrHumidity(rsRoRatio, HUMIDITY);
+      break;
+  }
+  return 0;
+}
+
+/*
+ * Using the slopes from the datasheet determines the ppm value of the current gas
+ */
+long getPercentages(float rsRoRatio, float *pCurve) {
+  return (pow(10, (((log(rsRoRatio) - pCurve[1]) / pCurve[2]) + pCurve[0])));
+}
+
+/*
+ * Will determine if it is checking the temperature or humidity value, might change if the sensor
+ * is only polled once a minute
+ */
+long getTemperatureOrHumidity(float tempOrHumidityValue, int tempOrHumidityID) {
+  return 0;
+}
+/*
+ * This function is called when the current date and time is needed when saving the sensor information
+ * It returns the dateTime formatted as xx/xx/xx xx:xx (month)/(day)/(year) (hour):(minute)
+ */
 String getDateTimeData() {
   // Local Variables
   int tempDateTimeInt;
@@ -294,54 +416,53 @@ String getDateTimeData() {
   return fullDateTime;
 }
 
-/* Reads the corresponding sensor data */
-float readSensor(int currentSensor) {
-
-  // Will need to redo based on sensor looking to capture
-  // sensorValue is global variable
-  sensorValue = analogRead(currentSensor);
-
-  return sensorValue;
-}
-
-/* After a minute this function will be called to save the value of each sensor */
+/*
+ * After a minute has passed, this function will be callled.
+ * It will iterate through each array position that has been cumulatively adding the sensor data.
+ * Each array position holds a specific sensor type which is declared at the top
+ * All sensors will be saved at the save time so, the dateTime will only be determined once.
+ * It will concate all the relevant information( time, date, sensor value) into one string and set the pathname
+ * and pass the data to another function to save the data
+ */
 void oneMinuteSave() {
   Serial.println("IN ONE MINUTE SAVE");
+
   // Get the date first so the data will all be saved at the same time
   currentSavingDateTime = getDateTimeData();
-  
+
   // Save all sensor data
-  for (int j = 8; j <= 15; j++) {
+  for (int i = 0; i <= totalAmountOfSensors; i++) {
     // Concatenate the date to the fullInput
     fullInput = String(fullInput + currentSavingDateTime);
-
     // Get average value for sensor
-    long tempAverageLong = sensorAverageArray[j];
+    long tempAverageLong = sensorAverageArray[i];
     String tempAverageString;
     tempAverageLong = tempAverageLong / sensorRuntimeCounter;
     // Convert to an ascii character
     tempAverageString = String(tempAverageLong);
-    
+
     // Append to the fullInput
-    fullInput = String(fullInput + tempAverageLong);
+    fullInput = String(fullInput + tempAverageString);
 
     // Convert current sensor number to ascii
-    directoryPath = String(directoryPath + "sen" + j + ".txt");
+    directoryPath = String(directoryPath + "sen" + i + ".txt");
+    Serial.println(directoryPath);
     // Send to be saved
     Serial.print("INPUT TO BE SAVED: ");
     Serial.print(fullInput);
     Serial.print(". AT DIRECTORYPATH: ");
     Serial.println(directoryPath);
     saveSensorReadings(directoryPath, fullInput);
-    
+
     clearSavedStrings();
-    
     // For debugging
     showFreeMemory();
   }
 }
 
-/* Saves the full input to the SD card */
+/*
+ * Passes the save data and pathname to the custom SD library to be saved to the SD card
+ */
 void saveSensorReadings(String saveTo, String dataToSave) {
   myFile = SD.open(directoryPath, FILE_WRITE);
   clarity = sdCardFunctions.writeToSD(myFile, dataToSave, saveTo);
@@ -354,12 +475,18 @@ void saveSensorReadings(String saveTo, String dataToSave) {
   myFile.close();
 }
 
-/* Clears the pathname of the input files */
+/*
+ * Clears the pathnames of the input files to be saved to the SD card
+ */
 void clearSavedStrings() {
   directoryPath = String("/sendata/");
   fullInput = String("");
 }
 
+/*
+ * Clears all the variables that are used in the interrupt routine and during saving
+ * so the next time the data needs to be saved the variables will be cleared
+ */
 void clearInterruptVariables() {
   // Reset the averageRunCounter;
   sensorRuntimeCounter = 0;
@@ -379,6 +506,32 @@ void clearInterruptVariables() {
   oneMinuteDelayCounter = 0;
 }
 
+/*
+ * Calibrates the MQ sensors upon startup to get the correct resistance values
+ */
+float calibrateMQSensor(int mqSensorPin) {
+  float value = 0;
+
+  // Get multiple samples for the calibration report
+  for (int i = 0; i < CALIBRATION_SAMPLE_SIZE; i++) {                          
+    value += sensorResistanceCalculation(analogRead(mqSensorPin));
+    delay(CALIBRATION_DELAY);
+  }
+  // Average
+  value = value / CALIBRATION_SAMPLE_SIZE;
+
+  // Yields Ro value according to chart on datasheet
+  value = value / RO_CLEAN_AIR;
+
+  return value;
+}
+
+/*
+ * Calculates the voltage across the load resistor to determine the current sensor value
+ */
+float sensorResistanceCalculation (int adcValue) {
+  return (((float)RL * (1023 - adcValue) / adcValue));
+}
 
 
 
