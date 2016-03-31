@@ -122,7 +122,7 @@ void setup() {
 SIGNAL(TIMER0_COMPA_vect) {
   // Increments once a millisecond
   oneMinuteDelayCounter++;
-  if (oneMinuteDelayCounter == 5000) {
+  if (oneMinuteDelayCounter == 20000) {
     oneMinute = true;
     Serial.println("One minute has passed.");
   }
