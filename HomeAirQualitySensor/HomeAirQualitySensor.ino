@@ -18,7 +18,7 @@
 */
 
 /* ---------- Libraries ---------- */
-#include <SDCardLibraryFunctions.h>           // Handles all SD related functions
+#include <SDCardLibraryFunctions.h> // Handles all SD related functions
 #include <Arduino.h>
 #include <SPI.h>
 #include <SD.h>
