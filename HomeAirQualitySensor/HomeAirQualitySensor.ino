@@ -2,7 +2,7 @@
    Home Air Quality Sensor
    Senior Design 2016
 
-   Code Version 0.2
+   Code Version 0.3
 
    Project Members:
    Lucas Enright
@@ -11,23 +11,33 @@
    Anthony Zaprzalka
 
    Description:
-
-
-
-
+   This multi-gas sensing unit can detect more gases than the average homeowner accounts for. Typical household sensors 
+   include smoke and carbon monoxide. This unit can detect variable concentrations of propane, CO, LPG, CH4, H2, and alcohol. 
+   It also detects smoke, temperature, and humidity. 
+   
+   While detecting the specified gases above, it will alert the user to abnormal or high concentrations of the specified gas 
+   by changing the color of the touchscreen LCD to a specific color, yellow for a warning and red for an alarm. If no alarm is 
+   currently being shown, the user is free to ‘scroll’ through the gas list and get a current value of the selected gas. Under 
+   normal conditions most of the values should be at or around 0.
+   
+   The device continuously monitors while powered-on and after every minute, it will save the average value of each gas to an 
+   SD card. This data can later be viewed through a companion desktop application so device lifetime values can be easily seen 
+   and understood.
 */
 
 /* ---------- Libraries ---------- */
+// Custom
 #include <SDCardLibraryFunctions.h>           // Handles all SD related functions
+#include <DHT.h>
+#include <Time.h>
+#include <TimeLib.h>
+#include <MemoryFree.h>
+// Included
 #include <Arduino.h>
 #include <SPI.h>
 #include <SD.h>
 #include <HardwareSerial.h>
-#include <MemoryFree.h>
-#include <Time.h>
-#include <TimeLib.h>
 #include <stdlib.h>
-#include <DHT.h>
 
 
 /* ---------- Definitions ---------- */
@@ -39,22 +49,26 @@
 #define CALIBRATION_SAMPLE_SIZE 25
 #define CALIBRATION_DELAY 250
 
-#define DHTSENSOR 45                          // Digital pin for the temperature and humidity sensor
+#define DHTPIN 45                             // Digital pin for the temperature and humidity sensor
 #define DHTTYPE DHT22
 
 // Don't need multiple readings per loop cycle
 // Loop throughs will take average after a minute
 
 // MQ2
-#define LPG 0
+#define PROPANE 0                            // These values will also be used to link an array position to this specific gas
 #define CO 1
-#define SMOKE 2
+#define SMOKE 2 
+
 // MQ5
+#define LPG 3
+#define CH4 4
+#define H2 5
+#define ALCOHOL 6
 
 // Temperature and Humidity sensor
-// Change these values to be last
-#define TEMP 3
-#define HUMIDITY 4
+#define TEMP 7
+#define HUMIDITY 8 
 
 /* ---------- Variable Declarations ---------- */
 // SD related variables
@@ -63,17 +77,17 @@ File myFile;                                  // Used to save information to SD 
 bool isSDInserted;                            // Check to see if the SD card is inserted
 
 // SD related saving variables
-String directoryPath = "/sendata/";
+String directoryPath = "/sendata/";           // Pathname where sensor data will be saved
 String fullInput;                             // The full input of Date/Time/Data
-String directoryName = "sendata";
-String currentSavingDateTime;
+String directoryName = "sendata"; 
+String currentSavingDateTime;                 // Full length of dateTime
 
 // Sensor variables
 float sensorValue;
 int sensorCounter = 0;                        // Counter variable for selecting sensor
-int totalAmountOfSensors = 5;                 // CHANGE DEPENDING ON AMOUNT OF SENSORS
-long sensorAverageArray[5];                   // Averages of all the sensors through the minute
-long sensorRuntimeCounter = 0;
+int totalAmountOfSensors = 9;                 // CHANGE DEPENDING ON AMOUNT OF SENSORS
+long sensorAverageArray[9];                   // Holds accumulated value of all the sensor values
+long sensorRuntimeCounter = 0;                // Averages of all the sensors through the minute
 
 // Interrupt variables
 unsigned int oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
@@ -83,17 +97,25 @@ bool oneMinute = false;                       // Turns true once a minute has pa
 // General purpose variables
 bool clarity;                                 // Return variable check
 
-// Temporary variables
-int analogPin = 0;
-
-float LPGCurve[3] = {2.3, 0.21, -0.47};
-float COCurve[3] = {2.3, 0.72, -0.34};
+// MQ2 Curves
+float COCurve[3] = {2.3, 0.72, -0.34};        // From the graph, (x, y, slope) ...
+                                              // point1 (log(200), log(5.25)) --> (2.3, 0.72) 
+                                              // point2 (log(10000), log(0.257)) -->(4, 0.15)
+                                              // Slope = (y2-y1/x2-x1) 
 float SmokeCurve[3] = {2.3, 0.53, -0.44};
+float PropaneCurve[3] = {2.3, 0.23, -0.46};
 
+// MQ5 Curves
+float LPGCurve[3] = {2.3, -0.15, -0.39};
+float CH4Curve[3] = {2.3, -0.02, -0.39};
+float H2Curve[3] = {2.3, 0.26, -0.25};
+float AlcoholCurve[3] = {2.3, 0.56, -0.21};
+
+// Resistances for the gas sensors
 float RoMQ2 = 10;                             // 10 kOhms
 float RoMQ5 = 10;
 
-DHT dht(DHTPIN, DHTTYPE);
+DHT dht(DHTPIN, DHTTYPE);                    // Initialize the temperature and humidity sensor
 
 void setup() {
   Serial.begin(115200);
@@ -126,13 +148,12 @@ void setup() {
   
   // For debugging
   showFreeMemory();
-
 } // END OF SETUP
 
 SIGNAL(TIMER0_COMPA_vect) {
   // Increments once a millisecond
   oneMinuteDelayCounter++;
-  twoSecondDelayCounter++;
+  twoSecondCounter++;
   if (oneMinuteDelayCounter == 60000) {
     oneMinute = true;
     Serial.println("One minute has passed.");
@@ -167,8 +188,6 @@ void loop() {
       while (true) {}
     }
   }
-
-
 } // END OF LOOP
 
 /* Function Declarations */
@@ -242,23 +261,36 @@ void createFilesystem() {
   myFile.close();
 
   // Check for files associated with the sensors. Need to change depending on amount of sensors
-  for (int i = 0; i < 5; i++) {
+  // Limited to an 8.3 naming pattern when creating filenames on the SD card
+  for (int i = 0; i < totalAmountOfSensors; i++) {
     switch (i) {
       case 0:
-        directoryPath = String(directoryPath + "sen0.txt");
+        directoryPath = String(directoryPath + "sen0.txt");         // Propane
         break;
       case 1:
-        directoryPath = String(directoryPath + "sen1.txt");
+        directoryPath = String(directoryPath + "sen1.txt");         // CO
         break;
       case 2:
-        directoryPath = String(directoryPath + "sen2.txt");
+        directoryPath = String(directoryPath + "sen2.txt");         // Smoke
         break;
       case 3:
-        directoryPath = String(directoryPath + "sen3.txt");
+        directoryPath = String(directoryPath + "sen3.txt");         // LPG
         break;
       case 4:
-        directoryPath = String(directoryPath + "sen4.txt");
+        directoryPath = String(directoryPath + "sen4.txt");         // CH4
         break;
+      case 5:
+        directoryPath = String(directoryPath + "sen5.txt");         // H2
+        break;
+      case 6:
+        directoryPath = String(directoryPath + "sen6.txt");         // Alcohol
+        break;
+      case 7:
+        directoryPath = String(directoryPath + "sen7.txt");         // Temperature
+        break;
+      case 8:
+        directoryPath = String(directoryPath + "sen8.txt");         // Humidity
+        break;      
     }
 
     // For debugging
@@ -324,22 +356,22 @@ float readSensor(int currentSensor) {
 
   // Reads the analog or digital value of the sensors
   // First checks MQ2 sensor
-  if (currentSensor == LPG || currentSensor <= SMOKE) {               // Between #define values of 0 and 2 for MQ2 sensor readings
+  if (currentSensor == PROPANE || currentSensor <= SMOKE) {              // Between #define values of 0 and 2 for MQ2 sensor readings
     rs = sensorResistanceCalculation(analogRead(MQ2));
     rs = rs / RoMQ2;
   }
   // MQ5 
-  //else if (currentSensor ==) {                                     // Between #define values of for MQ5 sensor readings
-    // rs = sensorResistanceCalculation(analogRead(MQ5)); 
-    // rs = rs / RoMQ5;
-  //}
+  else if (currentSensor == LPG || currentSensor <= ALCOHOL) {           // Between #define values of 3 and 6 for MQ5 sensor readings
+     rs = sensorResistanceCalculation(analogRead(MQ5)); 
+     rs = rs / RoMQ5;
+  }
   // Temperature 
-  else if (currentSensor == TEMP && twoSecondCounter >= 2000 ) {    // The #define value of TEMP is 
+  else if (currentSensor == TEMP && twoSecondCounter >= 2000 ) {         // The #define value of TEMP is 7
     // Read temperature as Fahrenheit (isFahrenheit = true)
     rs = dht.readTemperature(true);
   }
   // Humidity
-  else if (currentSensor == HUMIDITY && twoSecondCounter >= 2000) { // The #define value of HUMIDITY is 
+  else if (currentSensor == HUMIDITY && twoSecondCounter >= 2000) {      // The #define value of HUMIDITY is 8
     rs = dht.readHumidity();
     // Reset the two second counter value
     twoSecondCounter = 0;
@@ -353,14 +385,36 @@ float readSensor(int currentSensor) {
  */
 long getSensorPercentages (float rsRoRatio, int gasID) {
   switch (gasID) {
+    // MQ2
     case 0:
-      return getPercentages(rsRoRatio,LPGCurve);
+      return getPercentages(rsRoRatio, PropaneCurve);
       break;
     case 1:
-      return getPercentages(rsRoRatio,COCurve);
+      return getPercentages(rsRoRatio, COCurve);
       break;
     case 2:
-      return getPercentages(rsRoRatio,SmokeCurve);
+      return getPercentages(rsRoRatio, SmokeCurve);
+      break;
+    // MQ5
+    case 3:
+      return getPercentages(rsRoRatio, LPGCurve);
+      break;
+    case 4:
+      return getPercentages(rsRoRatio, CH4Curve);
+      break;
+    case 5:
+      return getPercentages(rsRoRatio, H2Curve);
+      break;
+    case 6:
+      return getPercentages(rsRoRatio, AlcoholCurve);
+      break;
+    // Temperature
+    case 7:
+      return rsRoRatio;       // Need to return value brought in since this will be temperature. Don't want to return 0!
+      break;
+    // Humidity
+    case 8:
+      return rsRoRatio;       // Need to return value brought in since this will be humidity
       break;
   }
   return 0;
@@ -537,7 +591,3 @@ float calibrateMQSensor(int mqSensorPin) {
 float sensorResistanceCalculation (int adcValue) {
   return (((float)RL * (1023 - adcValue) / adcValue));
 }
-
-
-
-
