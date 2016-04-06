@@ -26,19 +26,18 @@
 */
 
 /* ---------- Libraries ---------- */
-// Custom
-#include <SDCardLibraryFunctions.h> // Handles all SD related functions          
-#include <DHT.h>
-#include <Time.h>
-#include <TimeLib.h>
-#include <MemoryFree.h>
 // Included
 #include <Arduino.h>
 #include <SPI.h>
 #include <SD.h>
 #include <HardwareSerial.h>
 #include <stdlib.h>
-
+// Custom
+#include <SDCardLibraryFunctions.h>           // Handles all SD related functions          
+#include <DHT.h>
+#include <Time.h>
+#include <TimeLib.h>
+#include <MemoryFree.h>
 
 /* ---------- Definitions ---------- */
 #define MQ2 8                                 // Analog pin for MQ2 sensor
