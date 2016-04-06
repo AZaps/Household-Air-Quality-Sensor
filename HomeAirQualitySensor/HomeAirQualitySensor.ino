@@ -27,7 +27,7 @@
 
 /* ---------- Libraries ---------- */
 // Custom
-#include <SDCardLibraryFunctions.h>           // Handles all SD related functions
+#include <SDCardLibraryFunctions.h>          
 #include <DHT.h>
 #include <Time.h>
 #include <TimeLib.h>
