@@ -18,7 +18,7 @@
 */
 
 /* ---------- Libraries ---------- */
-//#include <SDCardLibraryFunctions.h> // Handles all SD related functions
+#include <SDCardLibraryFunctions.h>           // Handles all SD related functions
 #include <Arduino.h>
 #include <SPI.h>
 #include <SD.h>
@@ -27,6 +27,8 @@
 #include <Time.h>
 #include <TimeLib.h>
 #include <stdlib.h>
+#include <DHT.h>
+
 
 /* ---------- Definitions ---------- */
 #define MQ2 8                                 // Analog pin for MQ2 sensor
@@ -36,6 +38,9 @@
 
 #define CALIBRATION_SAMPLE_SIZE 25
 #define CALIBRATION_DELAY 250
+
+#define DHTSENSOR 45                          // Digital pin for the temperature and humidity sensor
+#define DHTTYPE DHT22
 
 // Don't need multiple readings per loop cycle
 // Loop throughs will take average after a minute
@@ -72,6 +77,7 @@ long sensorRuntimeCounter = 0;
 
 // Interrupt variables
 unsigned int oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
+unsigned int twoSecondCounter = 0;            // Used for measuring the temperature and humidity sensor every two seconds
 bool oneMinute = false;                       // Turns true once a minute has passed, resets once data has been saved
 
 // General purpose variables
@@ -86,6 +92,8 @@ float SmokeCurve[3] = {2.3, 0.53, -0.44};
 
 float RoMQ2 = 10;                             // 10 kOhms
 float RoMQ5 = 10;
+
+DHT dht(DHTPIN, DHTTYPE);
 
 void setup() {
   Serial.begin(115200);
@@ -113,6 +121,8 @@ void setup() {
   // Calibrate the senor
   RoMQ2 = calibrateMQSensor(MQ2);
   RoMQ5 = calibrateMQSensor(MQ5);
+
+  dht.begin();
   
   // For debugging
   showFreeMemory();
@@ -122,7 +132,8 @@ void setup() {
 SIGNAL(TIMER0_COMPA_vect) {
   // Increments once a millisecond
   oneMinuteDelayCounter++;
-  if (oneMinuteDelayCounter == 20000) {
+  twoSecondDelayCounter++;
+  if (oneMinuteDelayCounter == 60000) {
     oneMinute = true;
     Serial.println("One minute has passed.");
   }
@@ -313,18 +324,25 @@ float readSensor(int currentSensor) {
 
   // Reads the analog or digital value of the sensors
   // First checks MQ2 sensor
-  if (currentSensor == 0 || currentSensor <= 2) {
+  if (currentSensor == LPG || currentSensor <= SMOKE) {               // Between #define values of 0 and 2 for MQ2 sensor readings
     rs = sensorResistanceCalculation(analogRead(MQ2));
     rs = rs / RoMQ2;
   }
   // MQ5 
-  //else if (currentSensor ==) {
-    // rs = sensorResistanceCalculation(analogRead(MQ5));
+  //else if (currentSensor ==) {                                     // Between #define values of for MQ5 sensor readings
+    // rs = sensorResistanceCalculation(analogRead(MQ5)); 
     // rs = rs / RoMQ5;
   //}
-  // Temperature and humidity
-  else if (currentSensor == 3 || currentSensor == 4) {
-    
+  // Temperature 
+  else if (currentSensor == TEMP && twoSecondCounter >= 2000 ) {    // The #define value of TEMP is 
+    // Read temperature as Fahrenheit (isFahrenheit = true)
+    rs = dht.readTemperature(true);
+  }
+  // Humidity
+  else if (currentSensor == HUMIDITY && twoSecondCounter >= 2000) { // The #define value of HUMIDITY is 
+    rs = dht.readHumidity();
+    // Reset the two second counter value
+    twoSecondCounter = 0;
   }
   return rs;
 }
@@ -344,12 +362,6 @@ long getSensorPercentages (float rsRoRatio, int gasID) {
     case 2:
       return getPercentages(rsRoRatio,SmokeCurve);
       break;
-    case 3:
-      return getTemperatureOrHumidity(rsRoRatio, TEMP);
-      break;
-    case 4:
-      return getTemperatureOrHumidity(rsRoRatio, HUMIDITY);
-      break;
   }
   return 0;
 }
@@ -361,13 +373,6 @@ long getPercentages(float rsRoRatio, float *pCurve) {
   return (pow(10, (((log(rsRoRatio) - pCurve[1]) / pCurve[2]) + pCurve[0])));
 }
 
-/*
- * Will determine if it is checking the temperature or humidity value, might change if the sensor
- * is only polled once a minute
- */
-long getTemperatureOrHumidity(float tempOrHumidityValue, int tempOrHumidityID) {
-  return 0;
-}
 /*
  * This function is called when the current date and time is needed when saving the sensor information
  * It returns the dateTime formatted as xx/xx/xx xx:xx (month)/(day)/(year) (hour):(minute)
