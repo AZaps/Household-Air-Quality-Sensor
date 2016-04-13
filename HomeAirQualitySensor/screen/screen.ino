@@ -51,12 +51,11 @@ bool ran = true;
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 
-
+///////////////////////////////////////////////////////////////////////////////////////
 void setup(void) {
  
   Serial.begin(9600);
   Serial.println(F("TFT LCD test"));
-  pinMode(39, OUTPUT);
 
 #ifdef USE_ADAFRUIT_SHIELD_PINOUT
   Serial.println(F("Using Adafruit 2.8\" TFT Arduino Shield Pinout"));
@@ -310,6 +309,7 @@ void dataLayout(){  //Prints data in top right & left corners
     
     tft.setCursor(50,230);
     tft.println("GAS8");
+
 
     tft.setCursor(350,230);
     tft.println("GAS1");
