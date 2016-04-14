@@ -96,10 +96,10 @@
 //   D6 connects to digital pin 28
 //   D7 connects to digital pin 29
 
-#define YP A3  // must be an analog pin, use "An" notation!
-#define XM A2  // must be an analog pin, use "An" notation!
-#define YM 23   // can be a digital pin
-#define XP 22  // can be a digital pin
+#define YP A6  // must be an analog pin, use "An" notation!
+#define XM A5  // must be an analog pin, use "An" notation!
+#define YM 31   // can be a digital pin
+#define XP 33  // can be a digital pin
 
 #define TS_MINX 150
 #define TS_MINY 120
@@ -121,7 +121,6 @@
 
 int screenCount = 1;
 bool ran = true;
-TSPoint p;
 
 long sensorPrintValue;
 
@@ -212,6 +211,9 @@ void setup() {
 #ifdef USE_ADAFRUIT_SHIELD_PINOUT
   Serial.println(F("Using Adafruit 2.8\" TFT Arduino Shield Pinout"));
 #else
+
+
+-+
   Serial.println(F("Using Adafruit 2.8\" TFT Breakout Board Pinout"));
 #endif
 
@@ -328,10 +330,10 @@ void loop() {
     clearInterruptVariables();
   }
   
-  p = ts.getPoint();
+  TSPoint a = ts.getPoint();
   
-  if (p.z > MINPRESSURE && p.z < MAXPRESSURE) {
-    Press();
+  if (a.z > MINPRESSURE && a.z < MAXPRESSURE) {
+    Press(a);
   }
 
   if (Serial.available()) {
@@ -485,10 +487,10 @@ int getSensorData(int sensorNumber) {
   tempSensorValue = getSensorPercentages(tempSensorValue, sensorNumber);
   
   sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + tempSensorValue;
-  Serial.print("On sensor number: ");
-  Serial.print(sensorNumber);
-  Serial.print(". Has a value of: ");
-  Serial.println(sensorAverageArray[sensorNumber]);
+ // Serial.print("On sensor number: ");
+  //Serial.print(sensorNumber);
+ // Serial.print(". Has a value of: ");
+ // Serial.println(sensorAverageArray[sensorNumber]);
 
   // Increment sensor number and return
   sensorNumber++;
@@ -745,7 +747,7 @@ float sensorResistanceCalculation (int adcValue) {
   return (((float)RL * (1023 - adcValue) / adcValue));
 }
 
-void Press(){
+void Press(TSPoint p){
 
     p.x = map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
     p.y = map(p.y, TS_MINY, TS_MAXY, tft.height(), 0);
@@ -790,17 +792,17 @@ void dataLayout(){  //Prints data in top right & left corners
   tft.println("76 F");
   tft.setCursor(390,40);
   tft.println("80%");  
-
+  tft.setFont(&FreeSerif18pt7b);
+  
   if (screenCount==1){
 
     sensorPrintValue = sensorAverageArray[PROPANE]/sensorRuntimeCounter;
     tft.setCursor(220,150);
     tft.println(sensorPrintValue);
-    tft.println();
     tft.println("PROPANE");
     
     tft.setCursor(50,230);
-    tft.println("GAS9");
+    tft.println("ALCOHOL");
 
     tft.setCursor(350,230);
     tft.println("CO");   
@@ -811,7 +813,6 @@ void dataLayout(){  //Prints data in top right & left corners
     sensorPrintValue = sensorAverageArray[CO]/sensorRuntimeCounter;
     tft.setCursor(220,150);
     tft.println(sensorPrintValue);
-    tft.println();
     tft.println("CO");
     
     tft.setCursor(50,230);
@@ -826,7 +827,6 @@ void dataLayout(){  //Prints data in top right & left corners
     sensorPrintValue = sensorAverageArray[SMOKE]/sensorRuntimeCounter;
     tft.setCursor(220,150);
     tft.println(sensorPrintValue);
-    tft.println();
     tft.println("SMOKE");
     
     tft.setCursor(50,230);
@@ -841,7 +841,6 @@ void dataLayout(){  //Prints data in top right & left corners
     sensorPrintValue = sensorAverageArray[LPG]/sensorRuntimeCounter;
     tft.setCursor(220,150);
     tft.println(sensorPrintValue);
-    tft.println();
     tft.println("LPG");
     
     tft.setCursor(50,230);
@@ -856,7 +855,6 @@ void dataLayout(){  //Prints data in top right & left corners
     sensorPrintValue = sensorAverageArray[CH4]/sensorRuntimeCounter;
     tft.setCursor(220,150);
     tft.println(sensorPrintValue);
-    tft.println();
     tft.println("CH4");
     
     tft.setCursor(50,230);
@@ -871,7 +869,6 @@ void dataLayout(){  //Prints data in top right & left corners
     sensorPrintValue = sensorAverageArray[H2]/sensorRuntimeCounter;
     tft.setCursor(220,150);
     tft.println(sensorPrintValue);
-    tft.println();
     tft.println("H2");
     
     tft.setCursor(50,230);
@@ -886,7 +883,6 @@ void dataLayout(){  //Prints data in top right & left corners
     sensorPrintValue = sensorAverageArray[ALCOHOL]/sensorRuntimeCounter;
     tft.setCursor(220,150);
     tft.println(sensorPrintValue);
-    tft.println();
     tft.println("ALCOHOL");
     
     tft.setCursor(50,230);
