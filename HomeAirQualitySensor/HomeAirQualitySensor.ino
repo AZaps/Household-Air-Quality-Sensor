@@ -135,6 +135,7 @@ String directoryPath = "/sendata/";           // Pathname where sensor data will
 String fullInput;                             // The full input of Date/Time/Data
 String directoryName = "sendata"; 
 String currentSavingDateTime;                 // Full length of dateTime
+String currentTime;                           // Current hour and minute string to set the time
 
 // Sensor variables
 float sensorValue;
@@ -192,6 +193,7 @@ void setup() {
   // Manually set time here, or get inputted information from screen
   /*      hr  min sec day mth yr      *24 Hour time*/
   setTime(10, 30, 00, 15, 2, 16);
+  getCurrentTime();
 
   // Enable interrupts
   OCR0A = 0xAF;
@@ -211,9 +213,6 @@ void setup() {
 #ifdef USE_ADAFRUIT_SHIELD_PINOUT
   Serial.println(F("Using Adafruit 2.8\" TFT Arduino Shield Pinout"));
 #else
-
-
--+
   Serial.println(F("Using Adafruit 2.8\" TFT Breakout Board Pinout"));
 #endif
 
@@ -328,6 +327,9 @@ void loop() {
       }
     }
     clearInterruptVariables();
+    getCurrentTime();         // Sets currentTime to the current time in hh:mm am/pm
+    // Update the screen
+    
   }
   
   TSPoint a = ts.getPoint();
@@ -745,6 +747,17 @@ float calibrateMQSensor(int mqSensorPin) {
  */
 float sensorResistanceCalculation (int adcValue) {
   return (((float)RL * (1023 - adcValue) / adcValue));
+}
+
+/*
+ * Gets the current time to be displayed on the LCD screen
+ */
+void getCurrentTime() {
+  if (hour() > 12) {
+    currentTime = (String)(hour() - 12) + ":" + (String)minute() + " " + "pm";
+  } else {
+    currentTime = (String)hour() + ":" + (String)minute() + " " + "am";
+  }
 }
 
 void Press(TSPoint p){
