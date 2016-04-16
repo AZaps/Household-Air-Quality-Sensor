@@ -26,10 +26,10 @@
 //   D6 connects to digital pin 28
 //   D7 connects to digital pin 29
 
-#define YP A3  // must be an analog pin, use "An" notation!
-#define XM A2  // must be an analog pin, use "An" notation!
-#define YM 23   // can be a digital pin
-#define XP 22  // can be a digital pin
+#define YP A6  // must be an analog pin, use "An" notation!
+#define XM A5  // must be an analog pin, use "An" notation!
+#define YM 31   // can be a digital pin
+#define XP 33  // can be a digital pin
 
 #define TS_MINX 150
 #define TS_MINY 120
@@ -94,37 +94,11 @@ void setup(void) {
 
   tft.begin(identifier);
 
-  Serial.println(F("Benchmark                Time (microseconds)"));
-
-
-  Serial.println(F("Done!"));
 
   tft.setFont(&FreeSerif24pt7b);  // Set font to Serif 24pt
   tft.setRotation(1);             // Rotate text on screen
   tft.fillScreen(BLACK);
-  tft.setTextColor(WHITE);  
-  tft.setCursor(170,40);          // Set cursor location
-  tft.println("Home");            // Print string
-  tft.setCursor(190,100);
-  tft.println("Air");
-  tft.setCursor(155,160);
-  tft.println("Quality");
-  tft.setCursor(160,220);
-  tft.println("Sensor");
-  tft.setCursor(155,280);
-  tft.println("'HAQS'");
-  delay(1000);
-  tft.setTextColor(BLACK);        // Set text to black and write over previous text strings
-  tft.setCursor(170,40);
-  tft.println("Home");
-  tft.setCursor(190,100);
-  tft.println("Air");
-  tft.setCursor(155,160);
-  tft.println("Quality");
-  tft.setCursor(160,220);
-  tft.println("Sensor");
-  tft.setCursor(155,280);
-  tft.println("'HAQS'");
+
 
    
   dataLayout();
@@ -166,7 +140,7 @@ void loop(void) {
       if (p.y <100){
             screenCount++;
             
-            if (screenCount==10){
+            if (screenCount==8){
 
              screenCount=1;
            }
@@ -181,7 +155,7 @@ void loop(void) {
             screenCount--;
             if (screenCount==0){
              
-              screenCount=9;
+              screenCount=7;
               
               }
             tft.fillRect(0, 45, 480, 190, BLACK);
@@ -205,116 +179,110 @@ void dataLayout(){  //Prints data in top right & left corners
   tft.println("76 F");
   tft.setCursor(390,40);
   tft.println("80%");  
-
+  tft.setFont(&FreeSerif18pt7b);
+  
   if (screenCount==1){
 
-    tft.setCursor(220,150);
-    tft.println("GAS1");
+//    sensorPrintValue = sensorAverageArray[PROPANE]/sensorRuntimeCounter;
+    tft.setCursor(155,80);
+//    tft.println(sensorPrintValue);
+    tft.println("PROPANE");
     
-    tft.setCursor(50,230);
-    tft.println("GAS9");
+    tft.setCursor(0,230);
+    tft.println("ALCOHOL");
 
-    tft.setCursor(350,230);
-    tft.println("GAS2");   
+    tft.setCursor(370,230);
+    tft.println("CO");   
      
   }
 
   else if (screenCount==2){
-    tft.setCursor(220,150);
-    tft.println("GAS2");
+//    sensorPrintValue = sensorAverageArray[CO]/sensorRuntimeCounter;
+    tft.fillRect(0, 45, 480, 190, RED);
+    tft.setCursor(210,80);
+//    tft.println(sensorPrintValue);
+    tft.println("CO");
     
-    tft.setCursor(50,230);
-    tft.println("GAS1");
+    tft.setCursor(0,230);
+    tft.println("PROPANE");
 
-    tft.setCursor(350,230);
-    tft.println("GAS3");
+    tft.setCursor(340,230);
+    tft.println("SMOKE");
       
   }
 
    else if (screenCount==3){
-    tft.setCursor(220,150);
-    tft.println("GAS3");
+//    sensorPrintValue = sensorAverageArray[SMOKE]/sensorRuntimeCounter;
+    tft.setCursor(180,80);
+//    tft.println(sensorPrintValue);
+    tft.println("SMOKE");
     
-    tft.setCursor(50,230);
-    tft.println("GAS2");
+    tft.setCursor(60,230);
+    tft.println("CO");
 
-    tft.setCursor(350,230);
-    tft.println("GAS4");
+    tft.setCursor(360,230);
+    tft.println("LPG");
       
   }
 
    else if (screenCount==4){
-    tft.setCursor(220,150);
-    tft.println("GAS4");
+//    sensorPrintValue = sensorAverageArray[LPG]/sensorRuntimeCounter;
+    tft.fillRect(0, 45, 480, 190, YELLOW);
+    tft.setCursor(205,80);
+//    tft.println(sensorPrintValue);
+    tft.println("LPG");
     
-    tft.setCursor(50,230);
-    tft.println("GAS3");
+    tft.setCursor(25,230);
+    tft.println("SMOKE");
 
-    tft.setCursor(350,230);
-    tft.println("GAS5");
+    tft.setCursor(360,230);
+    tft.println("CH4");
       
   }
 
    else if (screenCount==5){
-    tft.setCursor(220,150);
-    tft.println("GAS5");
+//    sensorPrintValue = sensorAverageArray[CH4]/sensorRuntimeCounter;
+    tft.setCursor(205,80);
+//    tft.println(sensorPrintValue);
+    tft.println("CH4");
     
     tft.setCursor(50,230);
-    tft.println("GAS4");
+    tft.println("LPG");
 
-    tft.setCursor(350,230);
-    tft.println("GAS6");
+    tft.setCursor(370,230);
+    tft.println("H2");
       
   }
 
    else if (screenCount==6){
-    tft.setCursor(220,150);
-    tft.println("GAS6");
+//    sensorPrintValue = sensorAverageArray[H2]/sensorRuntimeCounter;
+    tft.setCursor(220,80);
+//    tft.println(sensorPrintValue);
+    tft.println("H2");
     
     tft.setCursor(50,230);
-    tft.println("GAS5");
+    tft.println("CH4");
 
-    tft.setCursor(350,230);
-    tft.println("GAS7");
+    tft.setCursor(310,230);
+    tft.println("ALCOHOL");
       
   }
 
    else if (screenCount==7){
-    tft.setCursor(220,150);
-    tft.println("GAS7");
+//    sensorPrintValue = sensorAverageArray[ALCOHOL]/sensorRuntimeCounter;
+    tft.setCursor(150,80);
+//  tft.println(sensorPrintValue);
+    tft.println("ALCOHOL");
     
-    tft.setCursor(50,230);
-    tft.println("GAS6");
+    tft.setCursor(60,230);
+    tft.println("H2");
 
-    tft.setCursor(350,230);
-    tft.println("GAS8");
+    tft.setCursor(315,230);
+    tft.println("PROPANE");
       
   }
 
-   else if (screenCount==8){
-    tft.setCursor(220,150);
-    tft.println("GAS8");
-    
-    tft.setCursor(50,230);
-    tft.println("GAS7");
 
-    tft.setCursor(350,230);
-    tft.println("GAS9");
-      
-  }
-
-   else if (screenCount==9){
-    tft.setCursor(220,150);
-    tft.println("GAS9");
-    
-    tft.setCursor(50,230);
-    tft.println("GAS8");
-
-
-    tft.setCursor(350,230);
-    tft.println("GAS1");
-      
-  }
 
 
 }

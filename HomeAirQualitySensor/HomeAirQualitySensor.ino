@@ -46,6 +46,7 @@
 #include <Fonts/FreeSerif18pt7b.h>
 #include <Fonts/FreeSerifBold24pt7b.h>
 #include <Fonts/FreeSerif24pt7b.h>
+#include <Fonts/FreeSansBold18pt7b.h>
 #include <Fonts/FreeSansBold24pt7b.h>
 
 /* ---------- Definitions ---------- */
@@ -136,6 +137,7 @@ String fullInput;                             // The full input of Date/Time/Dat
 String directoryName = "sendata"; 
 String currentSavingDateTime;                 // Full length of dateTime
 String currentTime;                           // Current hour and minute string to set the time
+String pastTime;                              // The last hour and minute string to set the time
 
 // Sensor variables
 float sensorValue;
@@ -192,7 +194,7 @@ void setup() {
 
   // Manually set time here, or get inputted information from screen
   /*      hr  min sec day mth yr      *24 Hour time*/
-  setTime(10, 30, 00, 15, 2, 16);
+  setTime(9, 30, 00, 15, 4, 16);
   getCurrentTime();
 
   // Enable interrupts
@@ -256,8 +258,8 @@ void setup() {
   tft.setRotation(1);             // Rotate text on screen
   tft.fillScreen(BLACK);
   tft.setTextColor(WHITE);  
-  tft.setCursor(170,40);          // Set cursor location
-  tft.println("Home");            // Print string
+  tft.setCursor(150,40);          // Set cursor location
+  tft.println("Household");            // Print string
   tft.setCursor(190,100);
   tft.println("Air");
   tft.setCursor(155,160);
@@ -268,8 +270,8 @@ void setup() {
   tft.println("'HAQS'");
   delay(1000);
   tft.setTextColor(BLACK);        // Set text to black and write over previous text strings
-  tft.setCursor(170,40);
-  tft.println("Home");
+  tft.setCursor(150,40);
+  tft.println("Household");
   tft.setCursor(190,100);
   tft.println("Air");
   tft.setCursor(155,160);
@@ -284,10 +286,10 @@ void setup() {
 
    
   dataLayout();
-  tft.setFont(&FreeSansBold24pt7b);
+  tft.setFont(&FreeSansBold18pt7b);
   
-  tft.setCursor(180,300);
-  tft.println("Time");
+  tft.setCursor(165,300);
+  tft.println(currentTime);
   
   tft.setFont();  // Disables previous font setting
   tft.fillRoundRect(10, 240, 150, 70, 20, BLUE);       // Print boxes for buttons
@@ -328,7 +330,7 @@ void loop() {
     }
     clearInterruptVariables();
     getCurrentTime();         // Sets currentTime to the current time in hh:mm am/pm
-    // Update the screen
+    setCurrentTime();         // Update the screen
     
   }
   
@@ -760,12 +762,23 @@ void getCurrentTime() {
   }
 }
 
+void setCurrentTime(){
+  tft.fillRect(160,240,160,70,BLACK);
+  tft.setFont(&FreeSansBold18pt7b);
+  tft.setTextColor(BLACK);
+  tft.setCursor(180,300);
+  tft.println(pastTime);
+  tft.setTextColor(WHITE);
+  tft.setCursor(180,300); 
+  tft.println(currentTime);
+}
+
 void Press(TSPoint p){
 
     p.x = map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
     p.y = map(p.y, TS_MINY, TS_MAXY, tft.height(), 0);
 
-    if (p.x >= 350 && p.x <= 480){
+
    
       if (p.y <100){
             screenCount++;
@@ -794,7 +807,7 @@ void Press(TSPoint p){
 
 
     }
-    }
+
     
 }
 
@@ -810,98 +823,101 @@ void dataLayout(){  //Prints data in top right & left corners
   if (screenCount==1){
 
     sensorPrintValue = sensorAverageArray[PROPANE]/sensorRuntimeCounter;
-    tft.setCursor(220,150);
-    tft.println(sensorPrintValue);
+    tft.setCursor(155,80);
     tft.println("PROPANE");
-    
-    tft.setCursor(50,230);
+    tft.println(sensorPrintValue);
+        
+    tft.setCursor(0,230);
     tft.println("ALCOHOL");
 
-    tft.setCursor(350,230);
+    tft.setCursor(370,230);
     tft.println("CO");   
      
   }
 
   else if (screenCount==2){
     sensorPrintValue = sensorAverageArray[CO]/sensorRuntimeCounter;
-    tft.setCursor(220,150);
-    tft.println(sensorPrintValue);
+    tft.fillRect(0, 45, 480, 190, RED);
+    tft.setCursor(210,80);
     tft.println("CO");
-    
-    tft.setCursor(50,230);
+    tft.println(sensorPrintValue);
+        
+    tft.setCursor(0,230);
     tft.println("PROPANE");
 
-    tft.setCursor(350,230);
+    tft.setCursor(340,230);
     tft.println("SMOKE");
       
   }
 
    else if (screenCount==3){
     sensorPrintValue = sensorAverageArray[SMOKE]/sensorRuntimeCounter;
-    tft.setCursor(220,150);
-    tft.println(sensorPrintValue);
+    tft.setCursor(180,80);
     tft.println("SMOKE");
-    
-    tft.setCursor(50,230);
+    tft.println(sensorPrintValue);
+        
+    tft.setCursor(60,230);
     tft.println("CO");
 
-    tft.setCursor(350,230);
+    tft.setCursor(360,230);
     tft.println("LPG");
       
   }
 
    else if (screenCount==4){
     sensorPrintValue = sensorAverageArray[LPG]/sensorRuntimeCounter;
-    tft.setCursor(220,150);
-    tft.println(sensorPrintValue);
+    tft.fillRect(0, 45, 480, 190, YELLOW);
+    tft.setTextColor(BLACK);  
+    tft.setCursor(205,80);
     tft.println("LPG");
+    tft.println(sensorPrintValue);
     
-    tft.setCursor(50,230);
+    tft.setCursor(25,230);
     tft.println("SMOKE");
 
-    tft.setCursor(350,230);
+    tft.setCursor(360,230);
     tft.println("CH4");
       
   }
 
    else if (screenCount==5){
     sensorPrintValue = sensorAverageArray[CH4]/sensorRuntimeCounter;
-    tft.setCursor(220,150);
-    tft.println(sensorPrintValue);
+    tft.setCursor(205,80);
     tft.println("CH4");
+    tft.println(sensorPrintValue);
     
     tft.setCursor(50,230);
     tft.println("LPG");
 
-    tft.setCursor(350,230);
+    tft.setCursor(370,230);
     tft.println("H2");
       
   }
 
    else if (screenCount==6){
     sensorPrintValue = sensorAverageArray[H2]/sensorRuntimeCounter;
-    tft.setCursor(220,150);
-    tft.println(sensorPrintValue);
+    tft.setCursor(220,80);
     tft.println("H2");
+    tft.println(sensorPrintValue);
     
     tft.setCursor(50,230);
     tft.println("CH4");
 
-    tft.setCursor(350,230);
+    tft.setCursor(310,230);
     tft.println("ALCOHOL");
       
   }
 
    else if (screenCount==7){
     sensorPrintValue = sensorAverageArray[ALCOHOL]/sensorRuntimeCounter;
-    tft.setCursor(220,150);
-    tft.println(sensorPrintValue);
+    tft.setCursor(150,80);
     tft.println("ALCOHOL");
+    tft.println(sensorPrintValue);
     
-    tft.setCursor(50,230);
+    tft.setCursor(60,230);
     tft.println("H2");
 
-    tft.setCursor(350,230);
+    tft.setCursor(315,230);
     tft.println("PROPANE");
       
   }
