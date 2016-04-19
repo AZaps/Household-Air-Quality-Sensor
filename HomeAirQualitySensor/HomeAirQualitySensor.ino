@@ -760,6 +760,16 @@ void setCurrentTime(){
 
   currentTemp = screenSensorReading(TEMP) + " F"; // Get the temperature
   currentHumidity = screenSensorReading(HUMIDITY) + " %"; // Get the temperature 
+
+  delay(300);
+  
+  tft.setFont(&FreeSerif24pt7b);
+  tft.fillRect(0,0,480,42,BLACK);
+  tft.setCursor(5,40);
+  tft.setTextColor(WHITE);   
+  tft.println(currentTemp);
+  tft.setCursor(320,40);
+  tft.println(currentHumidity);
 }
 
 /*
@@ -830,24 +840,20 @@ String screenSensorReading(int sensorNumber) {
  * Will update the main section of the screen when a touch is detected in the button area
  */
 void dataLayout(){  //Prints data in top right & left corners
-  
-  /*        I DONT THINK WE NEED THIS SINCE THE TEMP AND HUMIDITY IS BEING UPDATED ELSEWHERE  
-  tft.setFont(&FreeSerif24pt7b);
-  tft.setCursor(5,40);
-  tft.setTextColor(WHITE);   
-  tft.println("76 F");
-  tft.setCursor(390,40);
-  tft.println("80%");
-  */
+  tft.setTextColor(WHITE);
 
-  // I left this since I'm not sure if you need to set the font right away
   tft.setFont(&FreeSerif18pt7b);
   
   if (screenCount == 1){
     sensorPrintValue = screenSensorReading(PROPANE) + " ppm"; // Get the most current value for the selected gas 
-    tft.setCursor(155, 80);
-    tft.println("PROPANE");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(155, 100);
+    tft.println("PROPANE");
+
         
     tft.setCursor(0, 230);
     tft.println("ALCOHOL");
@@ -859,9 +865,13 @@ void dataLayout(){  //Prints data in top right & left corners
   else if (screenCount == 2){
     sensorPrintValue = screenSensorReading(CO) + " ppm"; // Get the most current value for the selected gas
     tft.fillRect(0, 45, 480, 190, RED);
-    tft.setCursor(210, 80);
-    tft.println("CO");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(210, 100);
+    tft.println("CO");
         
     tft.setCursor(0, 230);
     tft.println("PROPANE");
@@ -872,9 +882,13 @@ void dataLayout(){  //Prints data in top right & left corners
 
    else if (screenCount == 3){
     sensorPrintValue = screenSensorReading(SMOKE) + " ppm"; // Get the most current value for the selected gas
-    tft.setCursor(180, 80);
-    tft.println("SMOKE");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(180, 100);
+    tft.println("SMOKE");
         
     tft.setCursor(60, 230);
     tft.println("CO");
@@ -887,9 +901,13 @@ void dataLayout(){  //Prints data in top right & left corners
     sensorPrintValue = screenSensorReading(LPG) + " ppm"; // Get the most current value for the selected gas
     tft.fillRect(0, 45, 480, 190, YELLOW);
     tft.setTextColor(BLACK);  
-    tft.setCursor(205, 80);
-    tft.println("LPG");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(205, 100);
+    tft.println("LPG");
     
     tft.setCursor(25, 230);
     tft.println("SMOKE");
@@ -900,9 +918,13 @@ void dataLayout(){  //Prints data in top right & left corners
 
    else if (screenCount == 5){
     sensorPrintValue = screenSensorReading(CH4) + " ppm"; // Get the most current value for the selected gas
-    tft.setCursor(205, 80);
-    tft.println("CH4");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(205, 100);
+    tft.println("CH4");
     
     tft.setCursor(50, 230);
     tft.println("LPG");
@@ -913,9 +935,13 @@ void dataLayout(){  //Prints data in top right & left corners
 
    else if (screenCount == 6){
     sensorPrintValue = screenSensorReading(H2) + " ppm"; // Get the most current value for the selected gas
-    tft.setCursor(220, 80);
-    tft.println("H2");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(220, 100);
+    tft.println("H2");
     
     tft.setCursor(50, 230);
     tft.println("CH4");
@@ -927,9 +953,13 @@ void dataLayout(){  //Prints data in top right & left corners
 
    else if (screenCount == 7){
     sensorPrintValue = screenSensorReading(ALCOHOL) + " ppm"; // Get the most current value for the selected gas
-    tft.setCursor(150, 80);
-    tft.println("ALCOHOL");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(150, 100);
+    tft.println("ALCOHOL");
     
     tft.setCursor(60, 230);
     tft.println("H2");
