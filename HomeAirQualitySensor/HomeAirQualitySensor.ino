@@ -819,33 +819,30 @@ void Press(TSPoint p){
 String screenSensorReading(int sensorNumber) {
    float tempSensorValue = 0;
    String tempSensorString;
-   
-   if (sensorNumber != TEMP || sensorNumber != HUMIDITY) {
-    
+
+  if (sensorNumber == TEMP || sensorNumber == HUMIDITY) {
+    // Check only the temperature or humidity once, since the polling time is slow
+    tempSensorValue = readSensor(sensorNumber);
+    Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
+    Serial.print("For sensor: "); Serial.println(sensorNumber);
+    // Convert to a string
+    tempSensorString = (String)tempSensorValue;
+  } else {
+    // Get a 5 time average of the gases
     for (int i = 0; i < 5; i++) {
-     // Get pure analog or digital value for sensors
-     tempSensorValue = readSensor(sensorNumber);
-     // Convert value according to datasheet
-     // Saves in ppm 
-    
-     Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
-     Serial.print("For sensor: "); Serial.println(sensorNumber);
+      // Get analog value for gas sensors
+      tempSensorValue = readSensor(sensorNumber);
+      // Convert the analog value to the correct gas following the determined curve
+      tempSensorValue = getSensorPercentages(tempSensorValue, sensorNumber);
+      Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
+      Serial.print("For sensor: "); Serial.println(sensorNumber);
     }
     // Get the average
     tempSensorValue = tempSensorValue/5;
     // Convert to a string
     tempSensorString = (String)tempSensorValue;
-   }
-    // Will check for temperature or humidity once since they can only be polled once every two seconds minimum 
-    else {
-     tempSensorValue = readSensor(sensorNumber);
-     // Convert value according to datasheet
-     // Saves in ppm 
-     Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
-     Serial.print("For sensor: "); Serial.println(sensorNumber);
-     // Convert to a string
-     tempSensorString = (String)tempSensorValue;
-   }
+  }
+  
   return tempSensorString;
 }
 
