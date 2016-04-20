@@ -34,7 +34,7 @@
 #include <stdlib.h>
 // Custom
 #include <SDCardLibraryFunctions.h>           // Handles all SD related functions          
-#include <DHT.h>
+#include <dht.h>
 #include <Time.h>
 #include <TimeLib.h>
 #include <MemoryFree.h>
@@ -61,6 +61,7 @@
 
 // Temperatire and humidity sensor declaration
 #define DHTPIN 45                            // Digital pin for the temperature and humidity sensor
+#define DHT22_PIN 45
 #define DHTTYPE DHT22
 
 // MQ2
@@ -157,7 +158,7 @@ float AlcoholCurve[3] = {2.3, 0.56, -0.21};
 float RoMQ2 = 10;                             // 10 kOhms
 float RoMQ5 = 10;
 
-DHT dht(DHTPIN, DHTTYPE);                     // Initialize the temperature and humidity sensor
+dht DHT;                     // Initialize the temperature and humidity sensor
 
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
@@ -190,7 +191,7 @@ void setup() {
   RoMQ2 = calibrateMQSensor(MQ2);
   RoMQ5 = calibrateMQSensor(MQ5);
 
-  dht.begin();
+
   
   // For debugging
   showFreeMemory();
@@ -507,11 +508,24 @@ float readSensor(int currentSensor) {
   // Temperature 
   else if (currentSensor == TEMP) {                                     // The #define value of TEMP is 7
     // Read temperature as Fahrenheit (isFahrenheit = true)
-    rs = dht.readTemperature(true);
+    DHT.read22(DHT22_PIN);
+    delay(300);
+    Serial.print("Temp:");
+    Serial.print(DHT.temperature, 1);
+    rs = DHT.temperature;
+    rs = rs * (9/5) + 32; // convert to F
+    Serial.print("Temp RS");
+    Serial.print(rs);
   }
   // Humidity
   else if (currentSensor == HUMIDITY) {                                 // The #define value of HUMIDITY is 8
-    rs = dht.readHumidity();
+    DHT.read22(DHT22_PIN);
+    Serial.print("Humidity:");
+    Serial.print(DHT.humidity, 1);
+    delay(300);
+    rs = DHT.humidity;
+    Serial.print("RS Humidity:");
+    Serial.print(rs);
   }
   return rs;
 }
@@ -813,7 +827,7 @@ String screenSensorReading(int sensorNumber) {
      tempSensorValue = readSensor(sensorNumber);
      // Convert value according to datasheet
      // Saves in ppm 
-     tempSensorValue += getSensorPercentages(tempSensorValue, sensorNumber);
+    
      Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
      Serial.print("For sensor: "); Serial.println(sensorNumber);
     }
@@ -827,7 +841,6 @@ String screenSensorReading(int sensorNumber) {
      tempSensorValue = readSensor(sensorNumber);
      // Convert value according to datasheet
      // Saves in ppm 
-     tempSensorValue += getSensorPercentages(tempSensorValue, sensorNumber);
      Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
      Serial.print("For sensor: "); Serial.println(sensorNumber);
      // Convert to a string
