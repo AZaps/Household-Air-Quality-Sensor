@@ -64,6 +64,10 @@
 #define DHT22_PIN 45
 #define DHTTYPE DHT22
 
+// Speaker definition
+#define SPEAKER 10                           // Speaker pin definition, PWM pin
+#define FREQUENCY 1400                       // Frequency declaration
+
 // MQ2
 #define PROPANE 0                            // These values will also be used to link an array position to this specific gas
 #define CO 1
@@ -853,6 +857,9 @@ void dataLayout(){  //Prints data in top right & left corners
   tft.setTextColor(WHITE);
 
   tft.setFont(&FreeSerif18pt7b);
+
+  // Turn off the speaker
+  noTone(SPEAKER);
   
   if (screenCount == 1){
     sensorPrintValue = screenSensorReading(PROPANE) + " ppm"; // Get the most current value for the selected gas 
@@ -873,6 +880,8 @@ void dataLayout(){  //Prints data in top right & left corners
   }
 
   else if (screenCount == 2){
+    // Sound the alarms!
+    tone(SPEAKER, FREQUENCY);
     sensorPrintValue = screenSensorReading(CO) + " ppm"; // Get the most current value for the selected gas
     tft.fillRect(0, 45, 480, 190, RED);
     tft.setFont(&FreeSerif24pt7b);
