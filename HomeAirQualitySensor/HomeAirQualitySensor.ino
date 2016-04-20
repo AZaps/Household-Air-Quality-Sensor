@@ -510,12 +510,20 @@ float readSensor(int currentSensor) {
     // Read temperature as Fahrenheit (isFahrenheit = true)
     DHT.read22(DHT22_PIN);
     delay(300);
-    Serial.print("Temp:");
+    Serial.print("Temp: ");
     Serial.print(DHT.temperature, 1);
     rs = DHT.temperature;
-    rs = rs * (9/5) + 32; // convert to F
-    Serial.print("Temp RS");
+    rs = (rs * 1.8) + 32; // convert to F
+    Serial.print("Temp in F ");
     Serial.print(rs);
+
+  tft.setFont(&FreeSerif24pt7b);
+  tft.fillRect(0,0,300,42,BLACK);
+  tft.setCursor(5,40);
+  tft.setTextColor(WHITE);
+ String tempToPrint = String(rs) + " F";   
+  tft.println(tempToPrint);
+
   }
   // Humidity
   else if (currentSensor == HUMIDITY) {                                 // The #define value of HUMIDITY is 8
@@ -524,9 +532,15 @@ float readSensor(int currentSensor) {
     Serial.print(DHT.humidity, 1);
     delay(300);
     rs = DHT.humidity;
-    Serial.print("RS Humidity:");
-    Serial.print(rs);
+  tft.setFont(&FreeSerif24pt7b);
+  tft.fillRect(300,0,180,42,BLACK);
+  tft.setTextColor(WHITE);   
+  tft.setCursor(320,40);
+  String humidToPrint = String(rs) + " %";
+  tft.println(humidToPrint);
   }
+
+
   return rs;
 }
 
