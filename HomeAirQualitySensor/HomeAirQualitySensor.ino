@@ -2,7 +2,7 @@
    Home Air Quality Sensor
    Senior Design 2016
 
-   Code Version 0.3
+   Code Version 1.0
 
    Project Members:
    Lucas Enright
@@ -34,15 +34,15 @@
 #include <stdlib.h>
 // Custom
 #include <SDCardLibraryFunctions.h>           // Handles all SD related functions          
-#include <DHT.h>
+#include <dht.h>
 #include <Time.h>
 #include <TimeLib.h>
 #include <MemoryFree.h>
 
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_TFTLCD.h> // Hardware-specific library
+#include <Adafruit_GFX.h>                     // Core graphics library
+#include <Adafruit_TFTLCD.h>                  // Hardware-specific library
 #include <TouchScreen.h>
-#include <Fonts/FreeSerif12pt7b.h>  // Include new fonts
+#include <Fonts/FreeSerif12pt7b.h>            // Include new fonts
 #include <Fonts/FreeSerif18pt7b.h>
 #include <Fonts/FreeSerifBold24pt7b.h>
 #include <Fonts/FreeSerif24pt7b.h>
@@ -55,14 +55,18 @@
 #define RL 5                                  // Sensor load resistance in k-Ohms
 #define RO_CLEAN_AIR 9.83                     // clean air factor which is (sensor resistance in clean air/RO)
 
+// Calibration items for gas sensors
 #define CALIBRATION_SAMPLE_SIZE 25
 #define CALIBRATION_DELAY 250
 
-#define DHTPIN 45                             // Digital pin for the temperature and humidity sensor
+// Temperatire and humidity sensor declaration
+#define DHTPIN 45                            // Digital pin for the temperature and humidity sensor
+#define DHT22_PIN 45
 #define DHTTYPE DHT22
 
-// Don't need multiple readings per loop cycle
-// Loop throughs will take average after a minute
+// Speaker definition
+#define SPEAKER 10                           // Speaker pin definition, PWM pin
+#define FREQUENCY 1400                       // Frequency declaration
 
 // MQ2
 #define PROPANE 0                            // These values will also be used to link an array position to this specific gas
@@ -79,28 +83,16 @@
 #define TEMP 7
 #define HUMIDITY 8 
 
-#define LCD_CS A3 // Chip Select goes to Analog 3
-#define LCD_CD A2 // Command/Data goes to Analog 2
-#define LCD_WR A1 // LCD Write goes to Analog 1
-#define LCD_RD A0 // LCD Read goes to Analog 0
+#define LCD_RESET A4
+#define LCD_CS A3                            // Chip Select goes to Analog 3
+#define LCD_CD A2                            // Command/Data goes to Analog 2
+#define LCD_WR A1                            // LCD Write goes to Analog 1
+#define LCD_RD A0                            // LCD Read goes to Analog 0
 
-#define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
-
-// When using the BREAKOUT BOARD only, use these 8 data lines to the LCD:
-// For the Arduino Uno, Duemilanove, Diecimila, etc.:
-//   D0 connects to digital pin 22 
-//   D1 connects to digital pin 23
-//   D2 connects to digital pin 24
-//   D3 connects to digital pin 25
-//   D4 connects to digital pin 26
-//   D5 connects to digital pin 27
-//   D6 connects to digital pin 28
-//   D7 connects to digital pin 29
-
-#define YP A6  // must be an analog pin, use "An" notation!
-#define XM A5  // must be an analog pin, use "An" notation!
-#define YM 31   // can be a digital pin
-#define XP 33  // can be a digital pin
+#define YP A6                                // must be an analog pin, use "An" notation!
+#define XM A5                                // must be an analog pin, use "An" notation!
+#define YM 31                                // can be a digital pin
+#define XP 33                                // can be a digital pin
 
 #define TS_MINX 150
 #define TS_MINY 120
@@ -120,12 +112,10 @@
 #define MINPRESSURE 1
 #define MAXPRESSURE 1000
 
-int screenCount = 1;
-bool ran = true;
-
-long sensorPrintValue;
-
 /* ---------- Variable Declarations ---------- */
+int screenCount = 1;                          // Variable for tracking which gas is displayed on the screen
+String sensorPrintValue;                      // String for printing full output to string
+
 // SD related variables
 SD_Functions sdCardFunctions;                 // Used to communicate with library
 File myFile;                                  // Used to save information to SD card
@@ -148,7 +138,7 @@ long sensorRuntimeCounter = 0;                // Averages of all the sensors thr
 
 // Interrupt variables
 unsigned int oneMinuteDelayCounter = 0;       // 60,000 milliseconds in a minute, resets once data has been saved
-unsigned int twoSecondCounter = 0;            // Used for measuring the temperature and humidity sensor every two seconds
+unsigned int fiveSecondPollCounter = 0;       // Used for polling all the sensors once every 5 seconds instead of every loop iteration
 bool oneMinute = false;                       // Turns true once a minute has passed, resets once data has been saved
 
 // General purpose variables
@@ -172,7 +162,7 @@ float AlcoholCurve[3] = {2.3, 0.56, -0.21};
 float RoMQ2 = 10;                             // 10 kOhms
 float RoMQ5 = 10;
 
-DHT dht(DHTPIN, DHTTYPE);                    // Initialize the temperature and humidity sensor
+dht DHT;                     // Initialize the temperature and humidity sensor
 
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
@@ -194,7 +184,7 @@ void setup() {
 
   // Manually set time here, or get inputted information from screen
   /*      hr  min sec day mth yr      *24 Hour time*/
-  setTime(9, 30, 00, 15, 4, 16);
+  setTime(7, 30, 00, 22, 4, 16);
   getCurrentTime();
 
   // Enable interrupts
@@ -205,12 +195,10 @@ void setup() {
   RoMQ2 = calibrateMQSensor(MQ2);
   RoMQ5 = calibrateMQSensor(MQ5);
 
-  dht.begin();
+
   
   // For debugging
   showFreeMemory();
-
-    Serial.println(F("TFT LCD test"));
 
 #ifdef USE_ADAFRUIT_SHIELD_PINOUT
   Serial.println(F("Using Adafruit 2.8\" TFT Arduino Shield Pinout"));
@@ -237,73 +225,70 @@ void setup() {
   } else {
     Serial.print(F("Unknown LCD driver chip: "));
     Serial.println(identifier, HEX);
+    /*
     Serial.println(F("If using the Adafruit 2.8\" TFT Arduino shield, the line:"));
     Serial.println(F("  #define USE_ADAFRUIT_SHIELD_PINOUT"));
     Serial.println(F("should appear in the library header (Adafruit_TFT.h)."));
     Serial.println(F("If using the breakout board, it should NOT be #defined!"));
     Serial.println(F("Also if using the breakout, double-check that all wiring"));
     Serial.println(F("matches the tutorial."));
+    */
     return;
   }
 
-
   tft.begin(identifier);
 
-  Serial.println(F("Benchmark                Time (microseconds)"));
+  Serial.println("Done!");
 
-
-  Serial.println(F("Done!"));
-
-  tft.setFont(&FreeSerif24pt7b);  // Set font to Serif 24pt
-  tft.setRotation(1);             // Rotate text on screen
+  tft.setFont(&FreeSerif24pt7b);       // Set font to Serif 24pt
+  tft.setRotation(1);                  // Rotate text on screen
   tft.fillScreen(BLACK);
   tft.setTextColor(WHITE);  
-  tft.setCursor(150,40);          // Set cursor location
+  tft.setCursor(150, 40);              // Set cursor location
   tft.println("Household");            // Print string
-  tft.setCursor(190,100);
+  tft.setCursor(190, 100);
   tft.println("Air");
-  tft.setCursor(155,160);
+  tft.setCursor(155, 160);
   tft.println("Quality");
-  tft.setCursor(160,220);
+  tft.setCursor(160, 220);
   tft.println("Sensor");
-  tft.setCursor(155,280);
+  tft.setCursor(155, 280);
   tft.println("'HAQS'");
   delay(1000);
-  tft.setTextColor(BLACK);        // Set text to black and write over previous text strings
-  tft.setCursor(150,40);
+  tft.setTextColor(BLACK);             // Set text to black and write over previous text strings
+  tft.setCursor(150, 40);
   tft.println("Household");
-  tft.setCursor(190,100);
+  tft.setCursor(190, 100);
   tft.println("Air");
-  tft.setCursor(155,160);
+  tft.setCursor(155, 160);
   tft.println("Quality");
-  tft.setCursor(160,220);
+  tft.setCursor(160, 220);
   tft.println("Sensor");
-  tft.setCursor(155,280);
+  tft.setCursor(155, 280);
   tft.println("'HAQS'");
 
   pinMode(XM, OUTPUT);
   pinMode(YP, OUTPUT);
 
-   
   dataLayout();
   tft.setFont(&FreeSansBold18pt7b);
   
-  tft.setCursor(165,300);
+  tft.setCursor(165, 300);
   tft.println(currentTime);
   
-  tft.setFont();  // Disables previous font setting
-  tft.fillRoundRect(10, 240, 150, 70, 20, BLUE);       // Print boxes for buttons
-  tft.fillTriangle(85, 300, 48, 250, 121, 250, 0xF800); //
+  tft.setFont();                                            // Disables previous font setting
+  tft.fillRoundRect(10, 240, 150, 70, 20, BLUE);            // Print boxes for buttons
+  tft.fillTriangle(85, 300, 48, 250, 121, 250, 0xF800); 
   
-  tft.fillRoundRect(320, 240, 150, 70, 20, BLUE);    //
-  tft.fillTriangle(395, 250, 358, 300, 431, 300, RED);  //
+  tft.fillRoundRect(320, 240, 150, 70, 20, BLUE);    
+  tft.fillTriangle(395, 250, 358, 300, 431, 300, RED);  
 } // END OF SETUP
 
 
 SIGNAL(TIMER0_COMPA_vect) {
   // Increments once a millisecond
   oneMinuteDelayCounter++;
-  twoSecondCounter++;
+  fiveSecondPollCounter++;
   if (oneMinuteDelayCounter == 60000) {
     oneMinute = true;
     Serial.println("One minute has passed.");
@@ -311,7 +296,14 @@ SIGNAL(TIMER0_COMPA_vect) {
 } // END OF INTERRUPT
 
 void loop() {
-  sensorCounter = getSensorData(sensorCounter);
+  // Poll every sensor once every 5 seconds
+  if (fiveSecondPollCounter >= 5000 ) {
+    for (int i = 0; i < totalAmountOfSensors; i++) {
+      Serial.print("Five second read | Reading current sensor: "); Serial.println(i);
+      sensorCounter = getSensorData(sensorCounter);
+      }
+      fiveSecondPollCounter = 0;
+  }
 
   // Check bool oneMinute value to see if true
   if (oneMinute) {
@@ -331,22 +323,15 @@ void loop() {
     clearInterruptVariables();
     getCurrentTime();         // Sets currentTime to the current time in hh:mm am/pm
     setCurrentTime();         // Update the screen
-    
-  }
-  
-  TSPoint a = ts.getPoint();
-  
-  if (a.z > MINPRESSURE && a.z < MAXPRESSURE) {
-    Press(a);
   }
 
-  if (Serial.available()) {
-    char ch = Serial.read();
-    if (ch == 'S') {
-      Serial.println("STOPPING");
-      while (true) {}
-    }
-  }
+  // Poll for a screen press
+  TSPoint a = ts.getPoint();
+
+  // Determine the position if pressed
+  if (a.z > MINPRESSURE && a.z < MAXPRESSURE) {
+    Press(a);
+  } 
 } // END OF LOOP
 
 /* Function Declarations */
@@ -515,26 +500,55 @@ float readSensor(int currentSensor) {
 
   // Reads the analog or digital value of the sensors
   // First checks MQ2 sensor
-  if (currentSensor == PROPANE || currentSensor <= SMOKE) {              // Between #define values of 0 and 2 for MQ2 sensor readings
+  if (currentSensor == PROPANE || currentSensor <= SMOKE) {             // Between #define values of 0 and 2 for MQ2 sensor readings
     rs = sensorResistanceCalculation(analogRead(MQ2));
     rs = rs / RoMQ2;
   }
   // MQ5 
-  else if (currentSensor == LPG || currentSensor <= ALCOHOL) {           // Between #define values of 3 and 6 for MQ5 sensor readings
+  else if (currentSensor == LPG || currentSensor <= ALCOHOL) {          // Between #define values of 3 and 6 for MQ5 sensor readings
      rs = sensorResistanceCalculation(analogRead(MQ5)); 
      rs = rs / RoMQ5;
   }
   // Temperature 
-  else if (currentSensor == TEMP && twoSecondCounter >= 2000 ) {         // The #define value of TEMP is 7
+  else if (currentSensor == TEMP) {                                     // The #define value of TEMP is 7
     // Read temperature as Fahrenheit (isFahrenheit = true)
-    rs = dht.readTemperature(true);
+    DHT.read22(DHT22_PIN);
+    delay(300);
+    Serial.print("Temp: ");
+    Serial.print(DHT.temperature, 1);
+    rs = DHT.temperature;
+    rs = (rs * 1.8) + 29; // convert to F
+    Serial.print("Temp in F ");
+    Serial.print(rs);
+    
+    if (rs > 100) {
+      return rs;
+    }
+
+  tft.setFont(&FreeSerif24pt7b);
+  tft.fillRect(0,0,300,42,BLACK);
+  tft.setCursor(5,40);
+  tft.setTextColor(WHITE);
+ String tempToPrint = String(rs) + " F";   
+  tft.println(tempToPrint);
+
   }
   // Humidity
-  else if (currentSensor == HUMIDITY && twoSecondCounter >= 2000) {      // The #define value of HUMIDITY is 8
-    rs = dht.readHumidity();
-    // Reset the two second counter value
-    twoSecondCounter = 0;
+  else if (currentSensor == HUMIDITY) {                                 // The #define value of HUMIDITY is 8
+    DHT.read22(DHT22_PIN);
+    Serial.print("Humidity:");
+    Serial.print(DHT.humidity, 1);
+    delay(300);
+    rs = DHT.humidity;
+  tft.setFont(&FreeSerif24pt7b);
+  tft.fillRect(300,0,180,42,BLACK);
+  tft.setTextColor(WHITE);   
+  tft.setCursor(320,40);
+  String humidToPrint = String(rs) + " %";
+  tft.println(humidToPrint);
   }
+
+
   return rs;
 }
 
@@ -762,7 +776,11 @@ void getCurrentTime() {
   }
 }
 
+/*
+ * Refreshes the current time on the display, also updates the current temperature and humidity
+ */
 void setCurrentTime(){
+  // Update the time
   tft.fillRect(160,240,160,70,BLACK);
   tft.setFont(&FreeSansBold18pt7b);
   tft.setTextColor(BLACK);
@@ -771,161 +789,220 @@ void setCurrentTime(){
   tft.setTextColor(WHITE);
   tft.setCursor(180,300); 
   tft.println(currentTime);
+
+//  // Update the temperature and humidity
+//  String currentTemp;
+//  String currentHumidity;
+//
+//  currentTemp = screenSensorReading(TEMP) + " F"; // Get the temperature
+//  currentHumidity = screenSensorReading(HUMIDITY) + " %"; // Get the temperature 
+//
+//  delay(300);
+//  
+//  tft.setFont(&FreeSerif24pt7b);
+//  tft.fillRect(0,0,480,42,BLACK);
+//  tft.setCursor(5,40);
+//  tft.setTextColor(WHITE);   
+//  tft.println(currentTemp);
+//  tft.setCursor(320,40);
+//  tft.println(currentHumidity);
 }
 
+/*
+ * Determines where the touch input is located and decides if the next sensor should be shown or the previous
+ */
 void Press(TSPoint p){
+  p.x = map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
+  p.y = map(p.y, TS_MINY, TS_MAXY, tft.height(), 0);
 
-    p.x = map(p.x, TS_MINX, TS_MAXX, tft.width(), 0);
-    p.y = map(p.y, TS_MINY, TS_MAXY, tft.height(), 0);
-
-
-   
-      if (p.y <100){
-            screenCount++;
-            
-            if (screenCount==8){
-
-             screenCount=1;
-           }
-            tft.fillRect(0, 45, 480, 190, BLACK);
-            dataLayout();
-            tft.setFont(&FreeSansBold24pt7b);
-
-      }
-
-    
-     else if (p.y > 220){
-            screenCount--;
-            if (screenCount==0){
-             
-              screenCount=7;
-              
-              }
-            tft.fillRect(0, 45, 480, 190, BLACK);
-            dataLayout();
-            tft.setFont(&FreeSansBold24pt7b);
-
-
+  if (p.y < 100){
+    screenCount++;
+    if (screenCount == 8){      
+      screenCount = 1;
     }
-
-    
+    tft.fillRect(0, 45, 480, 190, BLACK);
+    dataLayout();
+    tft.setFont(&FreeSansBold24pt7b);
+    }
+    else if (p.y > 220){
+      screenCount--;
+      if (screenCount == 0){
+        screenCount = 7;
+      }
+    tft.fillRect(0, 45, 480, 190, BLACK);
+    dataLayout();
+    tft.setFont(&FreeSansBold24pt7b);
+    } 
 }
 
-void dataLayout(){  //Prints data in top right & left corners
-  tft.setFont(&FreeSerif24pt7b);
-  tft.setCursor(5,40);
-  tft.setTextColor(WHITE);   
-  tft.println("76 F");
-  tft.setCursor(390,40);
-  tft.println("80%");  
-  tft.setFont(&FreeSerif18pt7b);
-  
-  if (screenCount==1){
+/*
+ * Gets an immediate value of the sensors of five polls
+ */
+String screenSensorReading(int sensorNumber) {
+   float tempSensorValue = 0;
+   String tempSensorString;
 
-    sensorPrintValue = sensorAverageArray[PROPANE]/sensorRuntimeCounter;
-    tft.setCursor(155,80);
-    tft.println("PROPANE");
+  if (sensorNumber == TEMP || sensorNumber == HUMIDITY) {
+    // Check only the temperature or humidity once, since the polling time is slow
+    tempSensorValue = readSensor(sensorNumber);
+    Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
+    Serial.print("For sensor: "); Serial.println(sensorNumber);
+    // Convert to a string
+    tempSensorString = (String)tempSensorValue;
+  } else {
+    // Get a 5 time average of the gases
+    for (int i = 0; i < 5; i++) {
+      // Get analog value for gas sensors
+      tempSensorValue = readSensor(sensorNumber);
+      // Convert the analog value to the correct gas following the determined curve
+      tempSensorValue = getSensorPercentages(tempSensorValue, sensorNumber);
+      Serial.print("Returning current value of: "); Serial.print((long)tempSensorValue);
+      Serial.print("For sensor: "); Serial.println(sensorNumber);
+    }
+    // Get the average
+    tempSensorValue = tempSensorValue/5;
+    // Convert to a string
+    tempSensorString = (String)tempSensorValue;
+  }
+  
+  return tempSensorString;
+}
+
+/*
+ * Will update the main section of the screen when a touch is detected in the button area
+ */
+void dataLayout(){  //Prints data in top right & left corners
+  tft.setTextColor(WHITE);
+
+  tft.setFont(&FreeSerif18pt7b);
+
+  // Turn off the speaker
+  noTone(SPEAKER);
+  
+  if (screenCount == 1){
+    sensorPrintValue = screenSensorReading(PROPANE) + " ppm"; // Get the most current value for the selected gas 
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(155, 100);
+    tft.println("PROPANE");
+
         
-    tft.setCursor(0,230);
+    tft.setCursor(0, 230);
     tft.println("ALCOHOL");
 
-    tft.setCursor(370,230);
+    tft.setCursor(370, 230);
     tft.println("CO");   
-     
   }
 
-  else if (screenCount==2){
-    sensorPrintValue = sensorAverageArray[CO]/sensorRuntimeCounter;
+  else if (screenCount == 2){
+    // Sound the alarms!
+    tone(SPEAKER, FREQUENCY);
+    sensorPrintValue = screenSensorReading(CO) + " ppm"; // Get the most current value for the selected gas
     tft.fillRect(0, 45, 480, 190, RED);
-    tft.setCursor(210,80);
-    tft.println("CO");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(210, 100);
+    tft.println("CO");
         
-    tft.setCursor(0,230);
+    tft.setCursor(0, 230);
     tft.println("PROPANE");
 
-    tft.setCursor(340,230);
+    tft.setCursor(340, 230);
     tft.println("SMOKE");
-      
   }
 
-   else if (screenCount==3){
-    sensorPrintValue = sensorAverageArray[SMOKE]/sensorRuntimeCounter;
-    tft.setCursor(180,80);
-    tft.println("SMOKE");
+   else if (screenCount == 3){
+    sensorPrintValue = screenSensorReading(SMOKE) + " ppm"; // Get the most current value for the selected gas
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(180, 100);
+    tft.println("SMOKE");
         
-    tft.setCursor(60,230);
+    tft.setCursor(60, 230);
     tft.println("CO");
 
-    tft.setCursor(360,230);
-    tft.println("LPG");
-      
+    tft.setCursor(360, 230);
+    tft.println("LPG"); 
   }
 
-   else if (screenCount==4){
-    sensorPrintValue = sensorAverageArray[LPG]/sensorRuntimeCounter;
+   else if (screenCount == 4){
+    sensorPrintValue = screenSensorReading(LPG) + " ppm"; // Get the most current value for the selected gas
+    tone(SPEAKER, FREQUENCY, 1500);
     tft.fillRect(0, 45, 480, 190, YELLOW);
     tft.setTextColor(BLACK);  
-    tft.setCursor(205,80);
-    tft.println("LPG");
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(205, 100);
+    tft.println("LPG");
     
-    tft.setCursor(25,230);
+    tft.setCursor(25, 230);
     tft.println("SMOKE");
 
-    tft.setCursor(360,230);
-    tft.println("CH4");
-      
+    tft.setCursor(360, 230);
+    tft.println("CH4"); 
   }
 
-   else if (screenCount==5){
-    sensorPrintValue = sensorAverageArray[CH4]/sensorRuntimeCounter;
-    tft.setCursor(205,80);
-    tft.println("CH4");
+   else if (screenCount == 5){
+    sensorPrintValue = screenSensorReading(CH4) + " ppm"; // Get the most current value for the selected gas
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(205, 100);
+    tft.println("CH4");
     
-    tft.setCursor(50,230);
+    tft.setCursor(50, 230);
     tft.println("LPG");
 
-    tft.setCursor(370,230);
-    tft.println("H2");
-      
+    tft.setCursor(370, 230);
+    tft.println("H2");  
   }
 
-   else if (screenCount==6){
-    sensorPrintValue = sensorAverageArray[H2]/sensorRuntimeCounter;
-    tft.setCursor(220,80);
-    tft.println("H2");
+   else if (screenCount == 6){
+    sensorPrintValue = screenSensorReading(H2) + " ppm"; // Get the most current value for the selected gas
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(220, 100);
+    tft.println("H2");
     
-    tft.setCursor(50,230);
+    tft.setCursor(50, 230);
     tft.println("CH4");
 
-    tft.setCursor(310,230);
+    tft.setCursor(310, 230);
     tft.println("ALCOHOL");
       
   }
 
-   else if (screenCount==7){
-    sensorPrintValue = sensorAverageArray[ALCOHOL]/sensorRuntimeCounter;
-    tft.setCursor(150,80);
-    tft.println("ALCOHOL");
+   else if (screenCount == 7){
+    sensorPrintValue = screenSensorReading(ALCOHOL) + " ppm"; // Get the most current value for the selected gas
+    tft.setFont(&FreeSerif24pt7b);
+    tft.setCursor(140, 160);
     tft.println(sensorPrintValue);
+
+    tft.setFont(&FreeSerif18pt7b);
+    tft.setCursor(150, 100);
+    tft.println("ALCOHOL");
     
-    tft.setCursor(60,230);
+    tft.setCursor(60, 230);
     tft.println("H2");
 
-    tft.setCursor(315,230);
-    tft.println("PROPANE");
-      
+    tft.setCursor(315, 230);
+    tft.println("PROPANE");    
   }
-
-
-
-
 }
-
-
-
