@@ -184,7 +184,7 @@ void setup() {
 
   // Manually set time here, or get inputted information from screen
   /*      hr  min sec day mth yr      *24 Hour time*/
-  setTime(9, 30, 00, 15, 4, 16);
+  setTime(7, 30, 00, 22, 4, 16);
   getCurrentTime();
 
   // Enable interrupts
@@ -331,7 +331,7 @@ void loop() {
   // Determine the position if pressed
   if (a.z > MINPRESSURE && a.z < MAXPRESSURE) {
     Press(a);
-  }
+  } 
 } // END OF LOOP
 
 /* Function Declarations */
@@ -517,9 +517,13 @@ float readSensor(int currentSensor) {
     Serial.print("Temp: ");
     Serial.print(DHT.temperature, 1);
     rs = DHT.temperature;
-    rs = (rs * 1.8) + 32; // convert to F
+    rs = (rs * 1.8) + 29; // convert to F
     Serial.print("Temp in F ");
     Serial.print(rs);
+    
+    if (rs > 100) {
+      return rs;
+    }
 
   tft.setFont(&FreeSerif24pt7b);
   tft.fillRect(0,0,300,42,BLACK);
@@ -786,22 +790,22 @@ void setCurrentTime(){
   tft.setCursor(180,300); 
   tft.println(currentTime);
 
-  // Update the temperature and humidity
-  String currentTemp;
-  String currentHumidity;
-
-  currentTemp = screenSensorReading(TEMP) + " F"; // Get the temperature
-  currentHumidity = screenSensorReading(HUMIDITY) + " %"; // Get the temperature 
-
-  delay(300);
-  
-  tft.setFont(&FreeSerif24pt7b);
-  tft.fillRect(0,0,480,42,BLACK);
-  tft.setCursor(5,40);
-  tft.setTextColor(WHITE);   
-  tft.println(currentTemp);
-  tft.setCursor(320,40);
-  tft.println(currentHumidity);
+//  // Update the temperature and humidity
+//  String currentTemp;
+//  String currentHumidity;
+//
+//  currentTemp = screenSensorReading(TEMP) + " F"; // Get the temperature
+//  currentHumidity = screenSensorReading(HUMIDITY) + " %"; // Get the temperature 
+//
+//  delay(300);
+//  
+//  tft.setFont(&FreeSerif24pt7b);
+//  tft.fillRect(0,0,480,42,BLACK);
+//  tft.setCursor(5,40);
+//  tft.setTextColor(WHITE);   
+//  tft.println(currentTemp);
+//  tft.setCursor(320,40);
+//  tft.println(currentHumidity);
 }
 
 /*
@@ -932,6 +936,7 @@ void dataLayout(){  //Prints data in top right & left corners
 
    else if (screenCount == 4){
     sensorPrintValue = screenSensorReading(LPG) + " ppm"; // Get the most current value for the selected gas
+    tone(SPEAKER, FREQUENCY, 1500);
     tft.fillRect(0, 45, 480, 190, YELLOW);
     tft.setTextColor(BLACK);  
     tft.setFont(&FreeSerif24pt7b);
