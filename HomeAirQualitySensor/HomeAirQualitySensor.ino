@@ -769,10 +769,21 @@ float sensorResistanceCalculation (int adcValue) {
  * Gets the current time to be displayed on the LCD screen
  */
 void getCurrentTime() {
-  if (hour() > 12) {
-    currentTime = (String)(hour() - 12) + ":" + (String)minute() + " " + "pm";
+  String tempMinute;
+  
+  if (minute() < 10) {
+    tempMinute = "0" + minute();
   } else {
-    currentTime = (String)hour() + ":" + (String)minute() + " " + "am";
+    tempMinute = minute();
+  }
+  
+  if (hour() >= 12) {
+    currentTime = (String)(hour() - 12) + ":" + tempMinute + " pm";
+    if (hour() == 12) {
+      currentTime = (String)(hour()) + ":" + tempMinute + " pm";
+    }
+  } else {
+    currentTime = (String)hour() + ":" + tempMinute + " am";
   }
 }
 
@@ -789,23 +800,6 @@ void setCurrentTime(){
   tft.setTextColor(WHITE);
   tft.setCursor(180,300); 
   tft.println(currentTime);
-
-//  // Update the temperature and humidity
-//  String currentTemp;
-//  String currentHumidity;
-//
-//  currentTemp = screenSensorReading(TEMP) + " F"; // Get the temperature
-//  currentHumidity = screenSensorReading(HUMIDITY) + " %"; // Get the temperature 
-//
-//  delay(300);
-//  
-//  tft.setFont(&FreeSerif24pt7b);
-//  tft.fillRect(0,0,480,42,BLACK);
-//  tft.setCursor(5,40);
-//  tft.setTextColor(WHITE);   
-//  tft.println(currentTemp);
-//  tft.setCursor(320,40);
-//  tft.println(currentHumidity);
 }
 
 /*
