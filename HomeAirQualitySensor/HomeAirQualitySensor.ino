@@ -158,6 +158,27 @@ float CH4Curve[3] = {2.3, -0.02, -0.39};
 float H2Curve[3] = {2.3, 0.26, -0.25};
 float AlcoholCurve[3] = {2.3, 0.56, -0.21};
 
+// Warning Levels
+float COWarning = 50;
+float smokeWarning = 50;
+float propaneWarning = 1000;
+float LPGWarning = 1000;
+float CH4Warning = 1025;
+float H2Warning = 3000;
+float alcoholWarning = 1000;
+
+// Alert Levels
+float COAlert = 1200;
+float smokeAlert = 1200;
+float propaneAlert = 2100;
+float LPGAlert = 2000;
+float CH4Alert = 5000;
+float H2Alert = 4100;
+float alcoholAlert = 3300;
+
+bool alert = false;
+bool warning = false;
+
 // Resistances for the gas sensors
 float RoMQ2 = 10;                             // 10 kOhms
 float RoMQ5 = 10;
@@ -474,6 +495,9 @@ int getSensorData(int sensorNumber) {
   // Convert value according to datasheet
   // Saves in ppm 
   tempSensorValue = getSensorPercentages(tempSensorValue, sensorNumber);
+
+  // Check for warnings and alarms
+  //checkLevels(sensorNumber, tempSensorValue);
   
   sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + tempSensorValue;
  // Serial.print("On sensor number: ");
@@ -763,6 +787,116 @@ float calibrateMQSensor(int mqSensorPin) {
  */
 float sensorResistanceCalculation (int adcValue) {
   return (((float)RL * (1023 - adcValue) / adcValue));
+}
+
+void checkLevels(int sensor, float sensorValue) {
+  switch (sensor) {
+    // MQ2
+    case 0:
+      if (sensorValue >= propaneAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= propaneWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 1:
+      if (sensorValue >= COAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= COWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break; 
+    case 2:
+      if (sensorValue >= smokeAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= smokeWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break; 
+    // MQ5
+    case 3:
+      if (sensorValue >= LPGAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= LPGWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 4:
+      if (sensorValue >= CH4Alert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= CH4Warning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 5:
+      if (sensorValue >= H2Alert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= H2Warning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 6:
+      if (sensorValue >= alcoholAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= alcoholWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    // Temperature
+    case 7:
+      break;
+    // Humidity
+    case 8:
+    break;
+  }
 }
 
 /*
