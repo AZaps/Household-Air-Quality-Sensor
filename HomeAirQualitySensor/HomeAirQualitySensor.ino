@@ -158,6 +158,27 @@ float CH4Curve[3] = {2.3, -0.02, -0.39};
 float H2Curve[3] = {2.3, 0.26, -0.25};
 float AlcoholCurve[3] = {2.3, 0.56, -0.21};
 
+// Warning Levels
+float COWarning = 50;
+float smokeWarning = 50;
+float propaneWarning = 1000;
+float LPGWarning = 1000;
+float CH4Warning = 1025;
+float H2Warning = 3000;
+float alcoholWarning = 1000;
+
+// Alert Levels
+float COAlert = 1200;
+float smokeAlert = 1200;
+float propaneAlert = 2100;
+float LPGAlert = 2000;
+float CH4Alert = 5000;
+float H2Alert = 4100;
+float alcoholAlert = 3300;
+
+bool alert = false;
+bool warning = false;
+
 // Resistances for the gas sensors
 float RoMQ2 = 10;                             // 10 kOhms
 float RoMQ5 = 10;
@@ -184,7 +205,7 @@ void setup() {
 
   // Manually set time here, or get inputted information from screen
   /*      hr  min sec day mth yr      *24 Hour time*/
-  setTime(7, 30, 00, 22, 4, 16);
+  setTime(15, 30, 00, 28, 4, 16);
   getCurrentTime();
 
   // Enable interrupts
@@ -195,8 +216,6 @@ void setup() {
   RoMQ2 = calibrateMQSensor(MQ2);
   RoMQ5 = calibrateMQSensor(MQ5);
 
-
-  
   // For debugging
   showFreeMemory();
 
@@ -474,6 +493,9 @@ int getSensorData(int sensorNumber) {
   // Convert value according to datasheet
   // Saves in ppm 
   tempSensorValue = getSensorPercentages(tempSensorValue, sensorNumber);
+
+  // Check for warnings and alarms
+  //checkLevels(sensorNumber, tempSensorValue);
   
   sensorAverageArray[sensorNumber] = sensorAverageArray[sensorNumber] + tempSensorValue;
  // Serial.print("On sensor number: ");
@@ -736,6 +758,9 @@ void clearInterruptVariables() {
   }
   // Reset the oneMinuteDelayCounter
   oneMinuteDelayCounter = 0;
+
+  // For debugging
+  showFreeMemory();
 }
 
 /*
@@ -765,15 +790,156 @@ float sensorResistanceCalculation (int adcValue) {
   return (((float)RL * (1023 - adcValue) / adcValue));
 }
 
+void checkLevels(int sensor, float sensorValue) {
+  switch (sensor) {
+    // MQ2
+    case 0:
+      if (sensorValue >= propaneAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= propaneWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 1:
+      if (sensorValue >= COAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= COWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break; 
+    case 2:
+      if (sensorValue >= smokeAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= smokeWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break; 
+    // MQ5
+    case 3:
+      if (sensorValue >= LPGAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= LPGWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 4:
+      if (sensorValue >= CH4Alert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= CH4Warning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 5:
+      if (sensorValue >= H2Alert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= H2Warning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    case 6:
+      if (sensorValue >= alcoholAlert) {
+        tone(SPEAKER, FREQUENCY);
+        alert = true;
+        warning = false;
+      } else if (sensorValue >= alcoholWarning) {
+        tone(SPEAKER, FREQUENCY, 1500);
+        alert = false;
+        warning = true;
+      }
+      alert = false;
+      warning = false;
+      noTone(SPEAKER);
+      break;
+    // Temperature
+    case 7:
+      break;
+    // Humidity
+    case 8:
+    break;
+  }
+}
+
 /*
  * Gets the current time to be displayed on the LCD screen
  */
 void getCurrentTime() {
+  int tempTimeInt;
+  char tempTime[16];
+  currentTime = "";
+
   if (hour() > 12) {
-    currentTime = (String)(hour() - 12) + ":" + (String)minute() + " " + "pm";
+    tempTimeInt = hour() - 12;
+    itoa(tempTimeInt, tempTime, 10);
+    currentTime = currentTime + String(tempTime) + String(":");
   } else {
-    currentTime = (String)hour() + ":" + (String)minute() + " " + "am";
+    if (hour() == 0) {
+      tempTimeInt = hour() + 12;
+      itoa(tempTimeInt, tempTime, 10);
+      currentTime = currentTime + String(tempTime) + String(":");
+    } else{
+      tempTimeInt = hour();
+      itoa(tempTimeInt, tempTime, 10);
+      currentTime = currentTime + String(tempTime) + String(":");
+    }
   }
+
+  tempTimeInt = minute();
+  if (minute() < 10) {
+    currentTime = currentTime + String("0");
+  }
+  itoa(tempTimeInt, tempTime, 10);
+  currentTime = currentTime + String(tempTime) + (" ");
+
+  if (hour() >= 12) {
+    currentTime = currentTime + String("pm");
+  } else {
+    currentTime = currentTime + String("am");
+  }
+
+  Serial.print("The currentTime to print is: ");
+  Serial.println(currentTime);
 }
 
 /*
@@ -789,23 +955,6 @@ void setCurrentTime(){
   tft.setTextColor(WHITE);
   tft.setCursor(180,300); 
   tft.println(currentTime);
-
-//  // Update the temperature and humidity
-//  String currentTemp;
-//  String currentHumidity;
-//
-//  currentTemp = screenSensorReading(TEMP) + " F"; // Get the temperature
-//  currentHumidity = screenSensorReading(HUMIDITY) + " %"; // Get the temperature 
-//
-//  delay(300);
-//  
-//  tft.setFont(&FreeSerif24pt7b);
-//  tft.fillRect(0,0,480,42,BLACK);
-//  tft.setCursor(5,40);
-//  tft.setTextColor(WHITE);   
-//  tft.println(currentTemp);
-//  tft.setCursor(320,40);
-//  tft.println(currentHumidity);
 }
 
 /*
