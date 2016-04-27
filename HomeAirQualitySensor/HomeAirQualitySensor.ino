@@ -205,7 +205,7 @@ void setup() {
 
   // Manually set time here, or get inputted information from screen
   /*      hr  min sec day mth yr      *24 Hour time*/
-  setTime(7, 30, 00, 22, 4, 16);
+  setTime(15, 30, 00, 28, 4, 16);
   getCurrentTime();
 
   // Enable interrupts
@@ -216,8 +216,6 @@ void setup() {
   RoMQ2 = calibrateMQSensor(MQ2);
   RoMQ5 = calibrateMQSensor(MQ5);
 
-
-  
   // For debugging
   showFreeMemory();
 
@@ -760,6 +758,9 @@ void clearInterruptVariables() {
   }
   // Reset the oneMinuteDelayCounter
   oneMinuteDelayCounter = 0;
+
+  // For debugging
+  showFreeMemory();
 }
 
 /*
@@ -872,7 +873,8 @@ void checkLevels(int sensor, float sensorValue) {
         tone(SPEAKER, FREQUENCY, 1500);
         alert = false;
         warning = true;
-      }alert = false;
+      }
+      alert = false;
       warning = false;
       noTone(SPEAKER);
       break;
@@ -903,22 +905,41 @@ void checkLevels(int sensor, float sensorValue) {
  * Gets the current time to be displayed on the LCD screen
  */
 void getCurrentTime() {
-  String tempMinute;
-  
-  if (minute() < 10) {
-    tempMinute = "0" + minute();
+  int tempTimeInt;
+  char tempTime[16];
+  currentTime = "";
+
+  if (hour() > 12) {
+    tempTimeInt = hour() - 12;
+    itoa(tempTimeInt, tempTime, 10);
+    currentTime = currentTime + String(tempTime) + String(":");
   } else {
-    tempMinute = minute();
-  }
-  
-  if (hour() >= 12) {
-    currentTime = (String)(hour() - 12) + ":" + tempMinute + " pm";
-    if (hour() == 12) {
-      currentTime = (String)(hour()) + ":" + tempMinute + " pm";
+    if (hour() == 0) {
+      tempTimeInt = hour() + 12;
+      itoa(tempTimeInt, tempTime, 10);
+      currentTime = currentTime + String(tempTime) + String(":");
+    } else{
+      tempTimeInt = hour();
+      itoa(tempTimeInt, tempTime, 10);
+      currentTime = currentTime + String(tempTime) + String(":");
     }
-  } else {
-    currentTime = (String)hour() + ":" + tempMinute + " am";
   }
+
+  tempTimeInt = minute();
+  if (minute() < 10) {
+    currentTime = currentTime + String("0");
+  }
+  itoa(tempTimeInt, tempTime, 10);
+  currentTime = currentTime + String(tempTime) + (" ");
+
+  if (hour() >= 12) {
+    currentTime = currentTime + String("pm");
+  } else {
+    currentTime = currentTime + String("am");
+  }
+
+  Serial.print("The currentTime to print is: ");
+  Serial.println(currentTime);
 }
 
 /*
